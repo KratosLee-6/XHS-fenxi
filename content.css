@@ -1,0 +1,49 @@
+/* content.css - 悬浮工具条样式 */
+
+#xhs-float-bar {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.xhs-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  background: #fff;
+  color: #333;
+}
+
+.xhs-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.xhs-btn.active {
+  background: #ff2442;
+  color: #fff;
+}
+
+.xhs-btn.danger {
+  background: #ff4d4d;
+  color: #fff;
+}
+
+.xhs-btn.success {
+  background: #00c853;
+  color: #fff;
+}

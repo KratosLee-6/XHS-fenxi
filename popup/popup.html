@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>XHS Assistant</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:360px;background:#fff;color:#1a1a1a}
+.wrap{padding:14px}
+.title{font-size:15px;font-weight:600;margin-bottom:10px}
+.status-row{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
+.dot.ok{background:#52c41a}
+.dot.err{background:#ff4d4f}
+.page-info{font-size:11px;color:#888;margin-bottom:10px;line-height:1.5;background:#f5f5f5;padding:6px 8px;border-radius:6px;word-break:break-all}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.toggle-label{font-size:13px}
+.toggle{position:relative;width:34px;height:18px;cursor:pointer;display:inline-block}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:18px;transition:.2s;display:block}
+.toggle input:checked+.toggle-slider{background:#ff2442}
+.divider{border-top:1px solid #eee;margin:8px 0}
+.btn-full{width:100%;padding:9px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
+.btn-primary{background:#ff2442;color:#fff;margin-bottom:8px}
+.btn-secondary{background:#f5f5f5;color:#1a1a1a;margin-bottom:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f5f5f5;border-radius:8px;cursor:pointer;font-size:12px;color:#666;user-select:none}
+.section-arrow{font-size:10px;transition:transform .2s;display:inline-block}
+.section-body{padding:10px;border:1px solid #eee;border-radius:8px;margin-top:4px;display:none}
+.prov-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:10px}
+.prov{padding:5px 3px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:11px;cursor:pointer;text-align:center;color:#1a1a1a;transition:all .15s}
+.prov:hover{border-color:#ff2442}
+.prov.sel{border-color:#ff2442;background:#fff0f2;color:#ff2442;font-weight:600}
+.form-field{margin-bottom:6px}
+.form-label{font-size:11px;color:#888;margin-bottom:3px;display:block}
+.form-input{width:100%;padding:7px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;box-sizing:border-box;outline:none;font-family:inherit}
+.form-input:focus{border-color:#ff2442}
+.btn-save{width:100%;padding:8px;background:#ff2442;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer}
+.msg-line{font-size:11px;text-align:center;margin-top:5px;min-height:16px;color:#52c41a}
+.cur-api{font-size:10px;color:#aaa;background:#fafafa;border-radius:4px;margin-top:6px;padding:3px 6px;word-break:break-all}
+.footer{font-size:10px;color:#bbb;text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="title">XHS Assistant v2.1.5</div>
+
+  <div class="status-row">
+    <div class="dot" id="dotEl"></div>
+    <span id="statusEl" style="color:#888">Initializing...</span>
+  </div>
+
+  <div class="page-info" id="pageEl">Checking page...</div>
+
+  <div class="toggle-row">
+    <span class="toggle-label">Enable</span>
+    <label class="toggle">
+      <input type="checkbox" id="chkEl" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn-full btn-primary" id="btnSide">Open SidePanel</button>
+  <button class="btn-full btn-secondary" id="btnScp">Scrape This Page</button>
+
+  <div class="divider"></div>
+
+  <div class="section-header" id="setHdr">
+    <span>[Config] AI Model Settings</span>
+    <span class="section-arrow" id="setArrow">&#x25BC;</span>
+  </div>
+
+  <div class="section-body" id="setBody">
+    <div class="prov-grid">
+      <button class="prov sel" data-p="minimax" data-ep="https://api.minimaxi.com/anthropic/v1/messages" data-m="MiniMax-M2.7">MiniMax</button>
+      <button class="prov" data-p="openai" data-ep="https://api.openai.com/v1/chat/completions" data-m="gpt-4o-mini">OpenAI</button>
+      <button class="prov" data-p="kimi" data-ep="https://api.moonshot.cn/v1/chat/completions" data-m="moonshot-v1-8k">Kimi</button>
+      <button class="prov" data-p="deepseek" data-ep="https://api.deepseek.com/v1/chat/completions" data-m="deepseek-chat">DeepSeek</button>
+      <button class="prov" data-p="siliconflow" data-ep="https://api.siliconflow.cn/v1/chat/completions" data-m="Qwen/Qwen2.5-7B-Instruct">SiliconFlow</button>
+      <button class="prov" data-p="zhipu" data-ep="https://open.bigmodel.cn/api/paas/v4/chat/completions" data-m="glm-4-flash">Zhipu</button>
+      <button class="prov" data-p="qwen" data-ep="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" data-m="qwen-turbo">Qwen</button>
+      <button class="prov" data-p="custom" data-ep="" data-m="">Custom</button>
+    </div>
+
+    <div class="form-field">
+      <div class="form-label">API Endpoint</div>
+      <input type="text" class="form-input" id="inpEp" value="https://api.minimax.chat/v1/text/chatcompletion_v2">
+    </div>
+    <div class="form-field">
+      <div class="form-label">Model Name</div>
+      <input type="text" class="form-input" id="inpM" value="MiniMax-Text-01">
+    </div>
+    <div class="form-field">
+      <div class="form-label">API Key</div>
+      <input type="password" class="form-input" id="inpKey" placeholder="sk-...">
+    </div>
+    <div class="form-field">
+      <div class="form-label">Max Tokens</div>
+      <input type="number" class="form-input" id="inpTk" value="2000">
+    </div>
+
+    <button class="btn-save" id="btnSv">Save Config</button>
+    <div class="msg-line" id="msgEl"></div>
+    <div class="cur-api" id="curApiEl"></div>
+  </div>
+
+  <div class="footer">For XHS note pages</div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
