@@ -3,27 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <title>XHS Assistant</title>
+<link rel="stylesheet" href="../common.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:360px;background:#fff;color:#1a1a1a}
+body{font-family:var(--font-family);width:360px;background:var(--bg-card);color:var(--text-primary)}
 .wrap{padding:14px}
 .title{font-size:15px;font-weight:600;margin-bottom:10px}
 .status-row{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:8px}
 .dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
 .dot.ok{background:#52c41a}
 .dot.err{background:#ff4d4f}
-.page-info{font-size:11px;color:#888;margin-bottom:10px;line-height:1.5;background:#f5f5f5;padding:6px 8px;border-radius:6px;word-break:break-all}
+.page-info{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;background:var(--bg-hover);padding:6px 8px;border-radius:6px;word-break:break-all}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
 .toggle-label{font-size:13px}
 .toggle{position:relative;width:34px;height:18px;cursor:pointer;display:inline-block}
 .toggle input{opacity:0;width:0;height:0}
 .toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:18px;transition:.2s;display:block}
 .toggle input:checked+.toggle-slider{background:#ff2442}
-.divider{border-top:1px solid #eee;margin:8px 0}
+.divider{border-top:1px solid var(--border-color);margin:8px 0}
 .btn-full{width:100%;padding:9px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
 .btn-primary{background:#ff2442;color:#fff;margin-bottom:8px}
-.btn-secondary{background:#f5f5f5;color:#1a1a1a;margin-bottom:8px}
-.section-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f5f5f5;border-radius:8px;cursor:pointer;font-size:12px;color:#666;user-select:none}
+.btn-secondary{background:var(--bg-hover);color:var(--text-primary);margin-bottom:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg-hover);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);user-select:none}
 .section-arrow{font-size:10px;transition:transform .2s;display:inline-block}
 .section-body{padding:10px;border:1px solid #eee;border-radius:8px;margin-top:4px;display:none}
 .prov-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:10px}
@@ -43,7 +44,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:36
 <body>
 
 <div class="wrap">
-  <div class="title">XHS Assistant v2.1.5</div>
+  <div class="title">XHS Assistant v2.3.0</div>
 
   <div class="status-row">
     <div class="dot" id="dotEl"></div>
@@ -73,24 +74,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:36
   </div>
 
   <div class="section-body" id="setBody">
-    <div class="prov-grid">
-      <button class="prov sel" data-p="minimax" data-ep="https://api.minimaxi.com/anthropic/v1/messages" data-m="MiniMax-M2.7">MiniMax</button>
-      <button class="prov" data-p="openai" data-ep="https://api.openai.com/v1/chat/completions" data-m="gpt-4o-mini">OpenAI</button>
-      <button class="prov" data-p="kimi" data-ep="https://api.moonshot.cn/v1/chat/completions" data-m="moonshot-v1-8k">Kimi</button>
-      <button class="prov" data-p="deepseek" data-ep="https://api.deepseek.com/v1/chat/completions" data-m="deepseek-chat">DeepSeek</button>
-      <button class="prov" data-p="siliconflow" data-ep="https://api.siliconflow.cn/v1/chat/completions" data-m="Qwen/Qwen2.5-7B-Instruct">SiliconFlow</button>
-      <button class="prov" data-p="zhipu" data-ep="https://open.bigmodel.cn/api/paas/v4/chat/completions" data-m="glm-4-flash">Zhipu</button>
-      <button class="prov" data-p="qwen" data-ep="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" data-m="qwen-turbo">Qwen</button>
-      <button class="prov" data-p="custom" data-ep="" data-m="">Custom</button>
+    <div class="prov-grid" id="provGrid">
+      <!-- 动态渲染，数据来自 background.js PROVIDERS -->
     </div>
 
     <div class="form-field">
       <div class="form-label">API Endpoint</div>
-      <input type="text" class="form-input" id="inpEp" value="https://api.minimax.chat/v1/text/chatcompletion_v2">
+      <input type="text" class="form-input" id="inpEp" placeholder="选择服务商后自动填入">
     </div>
     <div class="form-field">
       <div class="form-label">Model Name</div>
-      <input type="text" class="form-input" id="inpM" value="MiniMax-Text-01">
+      <input type="text" class="form-input" id="inpM" placeholder="选择服务商后自动填入">
     </div>
     <div class="form-field">
       <div class="form-label">API Key</div>

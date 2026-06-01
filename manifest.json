@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "小红书运营工具箱",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "小红书运营必备：抓取/分析/改写/生成，100%本地DOM读取，不爬虫不封号",
 
   "permissions": [
@@ -30,6 +30,15 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "commands": {
+    "open-sidepanel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "打开小红书运营工具箱侧边栏"
+    }
   },
   "action": {
     "default_popup": "popup/popup.html",
@@ -61,5 +70,8 @@
       "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

@@ -17,33 +17,117 @@ let CONFIG = {
   _ready: false
 };
 
+// ========== AI Provider 统一配置（单一数据源）==========
+// 所有 UI 层（popup / sidepanel）通过 getProviders 消息获取此列表
+const PROVIDERS = {
+  minimax: {
+    name: 'MiniMax',
+    endpoint: 'https://api.minimaxi.com/anthropic/v1/messages',
+    model: 'MiniMax-M2.7',
+    authType: 'api-key',           // X-Api-Key header（Anthropic 兼容）
+    apiFormat: 'anthropic',        // Anthropic 消息格式
+    placeholder: '输入 MiniMax API Key（sk-cp-...）'
+  },
+  openai: {
+    name: 'OpenAI',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    model: 'gpt-4o-mini',
+    authType: 'bearer',
+    apiFormat: 'openai',           // OpenAI 兼容格式
+    placeholder: '输入 OpenAI API Key（sk-...）'
+  },
+  kimi: {
+    name: 'Kimi（月之暗面）',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    model: 'moonshot-v1-8k',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '输入 Kimi API Key（sk-...）'
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    endpoint: 'https://api.deepseek.com/v1/chat/completions',
+    model: 'deepseek-chat',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '输入 DeepSeek API Key'
+  },
+  siliconflow: {
+    name: '硅基流动（SiliconFlow）',
+    endpoint: 'https://api.siliconflow.cn/v1/chat/completions',
+    model: 'Qwen/Qwen2.5-7B-Instruct',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '输入硅基流动 API Key'
+  },
+  zhipu: {
+    name: '智谱 GLM',
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4-flash',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '输入智谱 API Key'
+  },
+  qwen: {
+    name: '通义千问（Qwen）',
+    endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'qwen-turbo',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '输入通义千问 API Key'
+  },
+  custom: {
+    name: '🔧 自定义 Endpoint',
+    endpoint: '',
+    model: '',
+    authType: 'bearer',
+    apiFormat: 'openai',
+    placeholder: '手动填写所有字段'
+  }
+};
+
 // ========== 初始化 ==========
+let _initPromise = null;
+
 async function ensureConfig() {
   if (CONFIG._ready) return;
-  try {
-    const result = await chrome.storage.local.get(['xhsConfig']);
-    if (result.xhsConfig) {
-      // 深合并，不覆盖未保存的字段
-      if (result.xhsConfig.ai) {
-        CONFIG.ai = { ...CONFIG.ai, ...result.xhsConfig.ai };
+  if (_initPromise) return _initPromise;  // 防止并发初始化
+  _initPromise = (async () => {
+    try {
+      const result = await chrome.storage.local.get(['xhsConfig']);
+      if (result.xhsConfig) {
+        if (result.xhsConfig.ai) {
+          CONFIG.ai = { ...CONFIG.ai, ...result.xhsConfig.ai };
+        }
+        if (result.xhsConfig.enabled !== undefined) {
+          CONFIG.enabled = result.xhsConfig.enabled;
+        }
       }
-      if (result.xhsConfig.account !== undefined) {
-        CONFIG.account = result.xhsConfig.account;
+      // 账号凭证从 session 存储加载（浏览器关闭后自动清除）
+      const sessionResult = await chrome.storage.session.get(['xhsAccount']);
+      if (sessionResult.xhsAccount) {
+        CONFIG.account = sessionResult.xhsAccount;
       }
-      if (result.xhsConfig.enabled !== undefined) {
-        CONFIG.enabled = result.xhsConfig.enabled;
-      }
+    } catch (e) {
+      console.warn('[XHS Tools] 配置加载失败:', e);
     }
-  } catch (e) {
-    console.warn('[XHS Tools] 配置加载失败:', e);
-  }
-  CONFIG._ready = true;
+    CONFIG._ready = true;
+  })();
+  return _initPromise;
 }
 
 // ========== 保存配置 ==========
+// AI 配置存 local（持久），账号凭证存 session（浏览器关闭后清除）
 async function saveConfig() {
   await ensureConfig();
-  await chrome.storage.local.set({ xhsConfig: CONFIG });
+  // 分离存储：AI 配置与账号分开
+  const { account, ...aiConfig } = CONFIG;
+  await chrome.storage.local.set({ xhsConfig: aiConfig });
+  if (account) {
+    await chrome.storage.session.set({ xhsAccount: account });
+  } else {
+    await chrome.storage.session.remove('xhsAccount');
+  }
 }
 
 // ========== 消息处理 ==========
@@ -156,6 +240,9 @@ async function handleMessage({ action, payload }, sender) {
     case 'getAiConfig':
       return { success: true, data: CONFIG.ai };
 
+    case 'getProviders':
+      return { success: true, data: PROVIDERS };
+
     // -------- 打开侧边栏 --------
     case 'openSidePanel':
       await chrome.tabs.create({ url: 'sidepanel/sidepanel.html', active: true });
@@ -165,6 +252,7 @@ async function handleMessage({ action, payload }, sender) {
     case 'scrape':
     case 'scrapeProfile':
     case 'scrapeComments':
+    case 'scrapeNoteList':
     case 'ping': {
       // 从 sender.tab 获取标签页 ID，支持从 sidepanel 或 popup 发起
       const tabId = sender.tab?.id || payload?.tabId;
@@ -277,20 +365,8 @@ async function aiComplete({ prompt, systemPrompt, mode }) {
 
   const provider = CONFIG.ai.provider;
 
-  // 各厂商 endpoint 映射（用户手动填了 endpoint 则优先用用户的）
-  const DEFAULT_ENDPOINTS = {
-    minimax:    'https://api.minimaxi.com/anthropic/v1/messages',  // Token Plan (Anthropic 兼容)
-    kimi:       'https://api.moonshot.cn/v1/chat/completions',
-    deepseek:   'https://api.deepseek.com/v1/chat/completions',
-    siliconflow:'https://api.siliconflow.cn/v1/chat/completions',
-    zhipu:      'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    qwen:       'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    openai:     'https://api.openai.com/v1/chat/completions',
-    custom:     null  // custom 无默认值，全靠用户填
-  };
-
-  // SiliconFlow 模型名格式（endpoint 为空时，后台自动加 Qwen/ 前缀）
-  const SILICONFLOW_PREFIX = 'Qwen/';
+  // 使用统一 PROVIDERS 配置获取默认值
+  const providerCfg = PROVIDERS[provider] || PROVIDERS['custom'];
 
   // 自动补全缺失的 https:// 协议头（防止用户编辑时误删）
   function normalizeEndpoint(ep) {
@@ -304,70 +380,106 @@ async function aiComplete({ prompt, systemPrompt, mode }) {
 
   let endpoint = normalizeEndpoint(CONFIG.ai.endpoint?.trim())
     ? normalizeEndpoint(CONFIG.ai.endpoint.trim())
-    : DEFAULT_ENDPOINTS[provider];
+    : providerCfg.endpoint || null;
 
-  let model = CONFIG.ai.model?.trim() || 'gpt-4o-mini';
+  let model = CONFIG.ai.model?.trim() || providerCfg.model || 'gpt-4o-mini';
 
   // SiliconFlow：若用户未手动填 endpoint，且 model 不含 /，则自动加 Qwen/ 前缀
   if (provider === 'siliconflow' && !CONFIG.ai.endpoint?.trim() && model && !model.includes('/')) {
     model = 'Qwen/' + model;
   }
 
-  let response;
-  let fullUrl = endpoint;  // 提前定义，try 和 catch 都要用到
-  try {
-    // MiniMax Token Plan：Anthropic 兼容格式
-    if (provider === 'minimax') {
-      const minimaxBody = {
-        model: CONFIG.ai.model?.trim() || 'MiniMax-M2.7',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
-        ],
-        max_tokens: CONFIG.ai.maxTokens || 2000
-      };
-      if (CONFIG.ai.temperature !== undefined) {
-        minimaxBody.temperature = CONFIG.ai.temperature;
+  // ========== 带超时和重试的 fetch ==========
+  const AI_TIMEOUT_MS = 60000;   // 60秒超时
+  const AI_MAX_RETRIES = 2;      // 最多重试2次
+
+  async function fetchWithRetry(url, fetchOpts) {
+    let lastError;
+    for (let attempt = 0; attempt <= AI_MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+      try {
+        const resp = await fetch(url, { ...fetchOpts, signal: controller.signal });
+        return resp;
+      } catch (err) {
+        lastError = err;
+        // 仅重试网络错误（超时/DNS/连接），不重试 HTTP 错误
+        if (attempt < AI_MAX_RETRIES && (err.name === 'AbortError' || err.name === 'TypeError')) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s
+          console.warn(`[XHS Tools] AI 请求失败，${delay}ms 后重试 (${attempt + 1}/${AI_MAX_RETRIES})`, err.message);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      } finally {
+        clearTimeout(timer);
       }
-      response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': CONFIG.ai.apiKey
-        },
-        body: JSON.stringify(minimaxBody)
-      });
-    } else {
-      // 其他厂商：OpenAI 兼容格式
+    }
+    throw lastError;
+  }
+
+  // ========== Adapter: 构建请求体 ==========
+  const apiFormat = providerCfg.apiFormat || 'openai';
+
+  function buildRequestBody() {
+    if (apiFormat === 'anthropic') {
       const body = {
         model: model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userContent }
         ],
-        max_tokens: CONFIG.ai.maxTokens || 2000,
-        temperature: CONFIG.ai.temperature ?? 0.7
+        max_tokens: CONFIG.ai.maxTokens || 2000
       };
-      response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${CONFIG.ai.apiKey}`
-        },
-        body: JSON.stringify(body)
-      });
+      if (CONFIG.ai.temperature !== undefined) body.temperature = CONFIG.ai.temperature;
+      return body;
     }
+    // OpenAI 兼容格式
+    return {
+      model: model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ],
+      max_tokens: CONFIG.ai.maxTokens || 2000,
+      temperature: CONFIG.ai.temperature ?? 0.7
+    };
+  }
+
+  function buildHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiFormat === 'anthropic') {
+      headers['X-Api-Key'] = CONFIG.ai.apiKey;
+    } else {
+      headers['Authorization'] = `Bearer ${CONFIG.ai.apiKey}`;
+    }
+    return headers;
+  }
+
+  function parseResponse(data) {
+    if (apiFormat === 'anthropic') {
+      const textBlock = Array.isArray(data.content)
+        ? data.content.find(b => b.type === 'text')
+        : null;
+      return textBlock?.text || null;
+    }
+    return data.choices?.[0]?.message?.content || null;
+  }
+
+  // ========== 发起请求 ==========
+  let response;
+  let fullUrl = endpoint;
+  try {
+    response = await fetchWithRetry(fullUrl, {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify(buildRequestBody())
+    });
   } catch (err) {
-    // 细化网络层错误诊断
+    if (err.name === 'AbortError') {
+      throw new Error(`AI 请求超时（${AI_TIMEOUT_MS / 1000}秒），请检查网络或尝试切换模型`);
+    }
     if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
-      if (!CONFIG.ai.apiKey) {
-        throw new Error('请先在设置中填写 API Key');
-      }
-      // CORS / 网络 / 代理 问题
-      if (!fullUrl || fullUrl.length < 10) {
-        throw new Error(`API Endpoint 未填写或格式异常：${fullUrl || '(空)'}`);
-      }
-      // CORS / 网络 / 代理 问题
+      if (!CONFIG.ai.apiKey) throw new Error('请先在设置中填写 API Key');
+      if (!fullUrl || fullUrl.length < 10) throw new Error(`API Endpoint 未填写或格式异常：${fullUrl || '(空)'}`);
       throw new Error(
         `网络请求失败，请检查：\n` +
         `1. 网络连接是否正常\n` +
@@ -391,22 +503,9 @@ async function aiComplete({ prompt, systemPrompt, mode }) {
   }
 
   const data = await response.json();
-
-  // MiniMax Token Plan (Anthropic 兼容) 响应格式
-  let content;
-  if (provider === 'minimax') {
-    // MiniMax content 是数组：{type:"thinking",...} 或 {type:"text",text:"..."}，取 text 类型
-    const textBlock = Array.isArray(data.content)
-      ? data.content.find(b => b.type === 'text')
-      : null;
-    content = textBlock?.text || null;
-  } else {
-    // OpenAI 兼容格式：data.choices[0].message.content
-    content = data.choices?.[0]?.message?.content || null;
-  }
+  const content = parseResponse(data);
 
   if (!content) {
-    // 提供更详细的错误信息帮助调试
     const sample = JSON.stringify(data).slice(0, 300);
     throw new Error('AI 返回内容为空，可能 API 余额不足或模型不可用。响应：' + sample);
   }
@@ -414,7 +513,14 @@ async function aiComplete({ prompt, systemPrompt, mode }) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[XHS Tools] 小红书运营工具箱已安装 v2.1.0');
+  console.log('[XHS Tools] 小红书运营工具箱已安装 v2.3.0');
+});
+
+// ========== 键盘快捷键 ==========
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'open-sidepanel') {
+    await chrome.tabs.create({ url: 'sidepanel/sidepanel.html', active: true });
+  }
 });
 
 // ========== 调试日志（生产可删）==========

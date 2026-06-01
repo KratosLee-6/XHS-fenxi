@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>小红书运营工具箱</title>
+<link rel="stylesheet" href="../common.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;font-size:13px;color:#333;display:flex;flex-direction:column;height:600px}
+body{width:100%;min-height:100dvh;font-family:var(--font-family);background:var(--bg-body);font-size:13px;color:var(--text-primary);display:flex;flex-direction:column;height:100dvh}
 
 /* 头部 */
 .panel-header{background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;padding:14px 16px;border-radius:0 0 16px 16px;flex-shrink:0}
@@ -14,7 +15,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 .panel-header p{font-size:11px;opacity:0.85;margin-top:2px}
 
 /* Tab导航 */
-.tabs{display:flex;background:#fff;padding:6px 12px;gap:4px;border-bottom:1px solid #eee;flex-shrink:0}
+.tabs{display:flex;background:var(--bg-card);padding:6px 12px;gap:4px;border-bottom:1px solid var(--border-color);flex-shrink:0}
 .tab{flex:1;padding:7px 4px;text-align:center;border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s;background:#f5f5f5;color:#666}
 .tab.active{background:#ff2442;color:#fff;font-weight:600}
 .tab:not(.active):hover{background:#ffe8ea}
@@ -34,7 +35,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 .msg.assistant .avatar{background:#e8e8e8;color:#666}
 .msg .bubble{max-width:80%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
 .msg.user .bubble{background:#ff2442;color:#fff;border-bottom-right-radius:4px}
-.msg.assistant .bubble{background:#fff;color:#333;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.msg.assistant .bubble{background:var(--bg-card);color:var(--text-primary);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .msg.tool .bubble{background:#f0f9ff;color:#0666c0;font-size:12px;border:1px solid #cce4ff;border-radius:8px}
 .msg.error .bubble{background:#fff5f5;color:#c00;border:1px solid #ffd0d0;border-radius:8px;font-size:12px}
 
@@ -45,7 +46,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ===== 输入区 ===== */
-.input-area{flex-shrink:0;border-top:1px solid #eee;background:#fff;padding:10px 12px}
+.input-area{flex-shrink:0;border-top:1px solid var(--border-color);background:var(--bg-card);padding:10px 12px}
 .input-row{display:flex;gap:8px;align-items:flex-end}
 .input-area textarea{flex:1;min-height:36px;max-height:100px;padding:8px 10px;border:1px solid #ddd;border-radius:10px;font-size:13px;resize:none;line-height:1.5;outline:none;font-family:inherit}
 .input-area textarea:focus{border-color:#ff2442}
@@ -59,14 +60,14 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 .tool-panel.active{display:flex}
 
 .func-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.func-item{background:#fff;border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;border:2px solid transparent;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:all .2s;font-size:12px}
+.func-item{background:var(--bg-card);border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;border:2px solid transparent;box-shadow:var(--shadow-sm);transition:all .2s;font-size:12px}
 .func-item:hover{border-color:#ff2442;box-shadow:0 2px 12px rgba(255,36,66,.15)}
 .func-item .icon{font-size:22px;margin-bottom:4px}
 .func-item .label{font-weight:600;margin-bottom:2px}
 .func-item .desc{font-size:10px;color:#999}
 
 /* 博主分析卡 */
-.author-card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.author-card{background:var(--bg-card);border-radius:12px;padding:14px;box-shadow:var(--shadow-sm)}
 .author-card .author-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .author-card .author-avatar{width:44px;height:44px;border-radius:50%;background:#ffe8ea;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
 .author-card .author-name{font-size:14px;font-weight:600}
@@ -88,7 +89,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 .btn-save:hover{background:#e6193a}
 
 /* 状态指示 */
-.status-mini{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border-radius:8px;font-size:11px;color:#666;border:1px solid #eee}
+.status-mini{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-card);border-radius:8px;font-size:11px;color:var(--text-secondary);border:1px solid var(--border-color)}
 .status-mini .dot{width:6px;height:6px;border-radius:50%;background:#ccc;flex-shrink:0}
 .status-mini .dot.ok{background:#00c853}
 .status-mini .dot.err{background:#ff4d4d}
@@ -96,7 +97,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* 空状态 */
-.empty-hint{text-align:center;color:#aaa;font-size:12px;padding:40px 20px;line-height:1.8}
+.empty-hint{text-align:center;color:var(--text-placeholder, #aaa);font-size:12px;padding:40px 20px;line-height:1.8}
 .empty-hint .icon{font-size:32px;margin-bottom:8px;opacity:.5}
 </style>
 </head>
@@ -175,6 +176,11 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
         <div class="label">查看评论</div>
         <div class="desc">读取评论数据</div>
       </div>
+      <div class="func-item" data-action="scrapeNoteList">
+        <div class="icon">📋</div>
+        <div class="label">列表抓取</div>
+        <div class="desc">搜索/发现页批量抓取</div>
+      </div>
       <div class="func-item" data-action="openComposer">
         <div class="icon">📤</div>
         <div class="label">创作入口</div>
@@ -227,6 +233,11 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
       <button id="btnBatchAnalyze" disabled style="width:100%;padding:10px;border-radius:10px;border:none;background:#ccc;color:#fff;font-size:13px;font-weight:600;cursor:not-allowed" title="收集2篇以上笔记后可批量分析">
         📊 批量分析（需2篇以上）
       </button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button id="btnExportCSV" disabled style="flex:1;padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:11px;cursor:pointer;color:#666">📥 CSV</button>
+        <button id="btnExportJSON" disabled style="flex:1;padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:11px;cursor:pointer;color:#666">📦 JSON</button>
+        <button id="btnExportMD" disabled style="flex:1;padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:11px;cursor:pointer;color:#666">📝 MD</button>
+      </div>
       <div id="cartHint" style="text-align:center;color:#aaa;font-size:11px;margin-top:6px">浏览笔记时点击「📦 加入分析车」即可收集</div>
     </div>
   </div>
@@ -236,14 +247,7 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
     <div class="form-row">
       <label>AI 服务商</label>
       <select id="aiProvider">
-        <option value="minimax">MiniMax</option>
-        <option value="kimi">Kimi（月之暗面）</option>
-        <option value="deepseek">DeepSeek</option>
-        <option value="siliconflow">硅基流动（SiliconFlow）</option>
-        <option value="zhipu">智谱 GLM</option>
-        <option value="qwen">通义千问（Qwen）</option>
-        <option value="openai">OpenAI（官方）</option>
-        <option value="custom">🔧 自定义 Endpoint</option>
+        <!-- 动态渲染，数据来自 background.js PROVIDERS -->
       </select>
     </div>
     <div class="form-row">
@@ -300,7 +304,10 @@ body{width:100%;min-height:600px;font-family:-apple-system,BlinkMacSystemFont,'S
 
     <div class="form-row">
       <label>小红书 Cookie（手动填入，绑定后自动填写）</label>
-      <input type="password" id="accountCookie" placeholder="可选">
+      <div style="display:flex;gap:4px">
+        <input type="password" id="accountCookie" placeholder="可选" style="flex:1">
+        <button type="button" id="btnToggleCookie" title="显示/隐藏" style="width:36px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px">👁️</button>
+      </div>
     </div>
     <button class="btn-save" id="btnSaveSettings">💾 保存设置</button>
     <div style="font-size:10px;color:#aaa;text-align:center;margin-top:4px">设置保存在本地，不会上传到任何服务器</div>

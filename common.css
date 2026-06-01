@@ -1,0 +1,76 @@
+/* common.css — 小红书运营工具箱 公共变量 + 暗色模式 */
+/* popup 和 sidepanel 共享 */
+
+:root {
+  /* 品牌色 */
+  --xhs-primary: #ff2442;
+  --xhs-primary-hover: #e6193a;
+  --xhs-primary-light: #fff0f2;
+  --xhs-gradient: linear-gradient(135deg, #ff2442, #ff6b81);
+
+  /* 功能色 */
+  --color-success: #00c853;
+  --color-warning: #f80;
+  --color-error: #ff4d4f;
+  --color-info: #0666c0;
+
+  /* 表面色 */
+  --bg-body: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #f5f5f5;
+  --bg-overlay: rgba(0, 0, 0, 0.04);
+
+  /* 边框 */
+  --border-color: #eee;
+  --border-input: #ddd;
+  --border-focus: var(--xhs-primary);
+
+  /* 文字 */
+  --text-primary: #1a1a1a;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --text-placeholder: #bbb;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 12px rgba(255, 36, 66, 0.15);
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 20px;
+
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 13px;
+  --font-size-lg: 15px;
+}
+
+/* ========== 暗色模式 ========== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --xhs-primary-light: #3d1119;
+
+    --bg-body: #1a1a1a;
+    --bg-card: #2a2a2a;
+    --bg-input: #333;
+    --bg-hover: #383838;
+    --bg-overlay: rgba(255, 255, 255, 0.04);
+
+    --border-color: #333;
+    --border-input: #444;
+
+    --text-primary: #e8e8e8;
+    --text-secondary: #aaa;
+    --text-muted: #777;
+    --text-placeholder: #555;
+
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 2px 12px rgba(255, 36, 66, 0.08);
+  }
+}

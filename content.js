@@ -264,74 +264,64 @@
   }
 
   // ========== 注入「加入分析车」按钮 ==========
+  function resetCartBtn(btn, delay) {
+    setTimeout(() => {
+      btn.textContent = '📦 加入分析车';
+      btn.className = '';
+      btn.style.pointerEvents = '';
+    }, delay);
+  }
+
   function injectCartButton() {
     if (document.getElementById('xhs-cart-btn')) return;
 
-    const btn = document.createElement('div');
+    const btn = document.createElement('button');
     btn.id = 'xhs-cart-btn';
     btn.textContent = '📦 加入分析车';
     btn.title = '将这篇笔记加入批量分析车';
-    btn.style.cssText = `
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      z-index: 9999;
-      background: linear-gradient(135deg, #ff2442, #ff6b81);
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(255,36,66,.35);
-      transition: all .2s;
-      user-select: none;
-    `;
     btn.addEventListener('click', async () => {
       let data;
       try {
         data = scrapeNote();
       } catch (e) {
         btn.textContent = '❌ 抓取失败';
-        btn.style.background = '#c00';
-        setTimeout(() => { btn.textContent = '📦 加入分析车'; btn.style.background = ''; }, 2000);
+        btn.className = 'xhs-cart-error';
+        resetCartBtn(btn, 2000);
         return;
       }
       if (!data.title && !data.content) {
         btn.textContent = '⚠️ 非笔记页';
-        btn.style.background = '#f80';
-        setTimeout(() => { btn.textContent = '📦 加入分析车'; btn.style.background = ''; }, 2000);
+        btn.className = 'xhs-cart-warning';
+        resetCartBtn(btn, 2000);
         return;
       }
       btn.textContent = '⏳ 加入中...';
-      btn.style.pointerEvents = 'none';
+      btn.className = 'xhs-cart-loading';
       try {
         const res = await chrome.runtime.sendMessage({ action: 'addToCart', payload: data });
         if (!res.success) throw new Error(res.error || '未知错误');
         if (res.added) {
           btn.textContent = '✅ 已加入';
-          btn.style.background = '#00c853';
+          btn.className = 'xhs-cart-success';
           setTimeout(() => {
             btn.textContent = '📦 加入分析车';
-            btn.style.background = '';
+            btn.className = '';
             btn.style.pointerEvents = '';
           }, 1500);
         } else {
           btn.textContent = '📦 已在车内';
+          btn.className = 'xhs-cart-duplicate';
           setTimeout(() => {
             btn.textContent = '📦 加入分析车';
+            btn.className = '';
             btn.style.pointerEvents = '';
           }, 1500);
         }
       } catch (e) {
         console.error('[XHS Cart] 加入失败:', e);
         btn.textContent = '❌ 加入失败: ' + e.message;
-        btn.style.background = '#c00';
-        setTimeout(() => {
-          btn.textContent = '📦 加入分析车';
-          btn.style.background = '';
-          btn.style.pointerEvents = '';
-        }, 2500);
+        btn.className = 'xhs-cart-error';
+        resetCartBtn(btn, 2500);
       }
     });
     document.body.appendChild(btn);

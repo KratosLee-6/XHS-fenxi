@@ -1,0 +1,25 @@
+# 打包产物
+*.tar.gz
+*.zip
+
+# 旧版本目录
+xhs-extension/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 依赖（如有）
+node_modules/
+
+# 临时文件
+*.tmp
+*.log
