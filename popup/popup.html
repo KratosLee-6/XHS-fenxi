@@ -2,105 +2,205 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>XHS Assistant</title>
+<title>小红书运营工具箱</title>
 <link rel="stylesheet" href="../common.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font-family);width:360px;background:var(--bg-card);color:var(--text-primary)}
-.wrap{padding:14px}
-.title{font-size:15px;font-weight:600;margin-bottom:10px}
-.status-row{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:8px}
-.dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
-.dot.ok{background:#52c41a}
-.dot.err{background:#ff4d4f}
-.page-info{font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;background:var(--bg-hover);padding:6px 8px;border-radius:6px;word-break:break-all}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
-.toggle-label{font-size:13px}
-.toggle{position:relative;width:34px;height:18px;cursor:pointer;display:inline-block}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{position:absolute;inset:0;background:#ccc;border-radius:18px;transition:.2s;display:block}
-.toggle input:checked+.toggle-slider{background:#ff2442}
-.divider{border-top:1px solid var(--border-color);margin:8px 0}
-.btn-full{width:100%;padding:9px;border:none;border-radius:8px;font-size:13px;cursor:pointer}
-.btn-primary{background:#ff2442;color:#fff;margin-bottom:8px}
-.btn-secondary{background:var(--bg-hover);color:var(--text-primary);margin-bottom:8px}
-.section-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg-hover);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text-secondary);user-select:none}
-.section-arrow{font-size:10px;transition:transform .2s;display:inline-block}
-.section-body{padding:10px;border:1px solid #eee;border-radius:8px;margin-top:4px;display:none}
-.prov-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:10px}
-.prov{padding:5px 3px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:11px;cursor:pointer;text-align:center;color:#1a1a1a;transition:all .15s}
-.prov:hover{border-color:#ff2442}
-.prov.sel{border-color:#ff2442;background:#fff0f2;color:#ff2442;font-weight:600}
-.form-field{margin-bottom:6px}
-.form-label{font-size:11px;color:#888;margin-bottom:3px;display:block}
-.form-input{width:100%;padding:7px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;box-sizing:border-box;outline:none;font-family:inherit}
-.form-input:focus{border-color:#ff2442}
-.btn-save{width:100%;padding:8px;background:#ff2442;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer}
-.msg-line{font-size:11px;text-align:center;margin-top:5px;min-height:16px;color:#52c41a}
-.cur-api{font-size:10px;color:#aaa;background:#fafafa;border-radius:4px;margin-top:6px;padding:3px 6px;word-break:break-all}
-.footer{font-size:10px;color:#bbb;text-align:center;margin-top:12px}
+body{font-family:var(--font-family);width:340px;background:var(--bg-body);color:var(--text-primary)}
+
+/* ===== 头部 ===== */
+.header{background:linear-gradient(135deg,#ff2442,#ff6b81);padding:16px 20px;color:#fff}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.header-logo{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.header-title{font-size:15px;font-weight:700}
+.header-ver{font-size:10px;opacity:.7;font-weight:400;margin-left:4px}
+.header-sub{font-size:11px;opacity:.8;margin-top:2px;padding-left:46px}
+
+/* ===== 内容区 ===== */
+.content{padding:12px 16px 16px;display:flex;flex-direction:column;gap:10px}
+
+/* ===== 卡片通用 ===== */
+.card{background:var(--bg-card);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow-sm)}
+
+/* ===== 状态栏 ===== */
+.status-bar{display:flex;align-items:center;gap:8px;padding:6px 0}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.status-dot.connected{background:#52c41a;box-shadow:0 0 6px rgba(82,196,26,.4)}
+.status-dot.disconnected{background:#ccc}
+.status-dot.error{background:#ff4d4f;box-shadow:0 0 6px rgba(255,77,79,.4)}
+.status-text{font-size:12px;color:var(--text-secondary);font-weight:500}
+.page-badge{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.page-badge.xhs{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.page-badge.other{background:var(--bg-hover);color:var(--text-muted);border:1px solid var(--border-color)}
+
+/* ===== 操作按钮区 ===== */
+.action-row{display:flex;gap:8px}
+.btn{padding:10px 0;border-radius:10px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn-primary{flex:1;background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;box-shadow:0 2px 10px rgba(255,36,66,.25)}
+.btn-primary:hover{box-shadow:0 4px 16px rgba(255,36,66,.35);transform:translateY(-1px)}
+.btn-primary:disabled{background:#ccc;box-shadow:none;cursor:not-allowed;transform:none}
+.btn-outline{flex:1;background:var(--bg-card);color:var(--text-primary);border:1.5px solid var(--border-color)}
+.btn-outline:hover{border-color:#ff2442;color:#ff2442;background:var(--xhs-primary-light)}
+
+/* ===== 开关行 ===== */
+.toggle-row{display:flex;align-items:center;justify-content:space-between}
+.toggle-left{display:flex;align-items:center;gap:8px}
+.toggle-icon{font-size:16px}
+.toggle-label{font-size:13px;font-weight:500}
+.toggle-hint{font-size:10px;color:var(--text-muted)}
+
+/* 自定义开关 */
+.toggle-switch{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:#d1d5db;border-radius:22px;transition:all .25s}
+.toggle-track::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:all .25s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle-switch input:checked+.toggle-track{background:#ff2442}
+.toggle-switch input:checked+.toggle-track::after{transform:translateX(18px)}
+
+/* ===== 设置区 ===== */
+.settings-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;border-radius:10px;transition:background .15s}
+.settings-header:hover{background:var(--bg-hover)}
+.settings-left{display:flex;align-items:center;gap:8px}
+.settings-icon{font-size:14px}
+.settings-label{font-size:13px;font-weight:500;color:var(--text-primary)}
+.settings-arrow{font-size:10px;color:var(--text-muted);transition:transform .25s}
+.settings-arrow.open{transform:rotate(180deg)}
+.settings-body{overflow:hidden;transition:max-height .3s ease,padding .3s ease;max-height:0;padding:0 14px}
+.settings-body.open{max-height:480px;padding:4px 14px 12px}
+
+/* ===== 服务商网格 ===== */
+.prov-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:10px}
+.prov-btn{padding:7px 2px;border:1.5px solid var(--border-color);border-radius:8px;background:var(--bg-card);font-size:10px;cursor:pointer;text-align:center;color:var(--text-primary);transition:all .15s;font-family:inherit;font-weight:500}
+.prov-btn:hover{border-color:#ffb3be}
+.prov-btn.selected{border-color:#ff2442;background:var(--xhs-primary-light);color:#ff2442;font-weight:700}
+
+/* ===== 表单 ===== */
+.form-group{margin-bottom:8px}
+.form-label{display:block;font-size:11px;color:var(--text-secondary);margin-bottom:3px;font-weight:500}
+.form-input{width:100%;padding:8px 10px;border:1.5px solid var(--border-input);border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:var(--bg-input);color:var(--text-primary);transition:border-color .2s}
+.form-input:focus{border-color:#ff2442;box-shadow:0 0 0 3px rgba(255,36,66,.08)}
+.form-input::placeholder{color:var(--text-placeholder)}
+.form-input[type="number"]{width:100px}
+
+/* ===== 保存按钮 ===== */
+.btn-save{width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-save:hover{box-shadow:0 4px 16px rgba(255,36,66,.3)}
+.btn-save:active{transform:scale(.97)}
+
+/* ===== 消息/提示 ===== */
+.msg-line{font-size:11px;text-align:center;margin-top:6px;min-height:18px;font-weight:500;transition:color .2s}
+.api-info{font-size:10px;color:var(--text-muted);background:var(--bg-hover);border-radius:8px;margin-top:8px;padding:6px 10px;word-break:break-all;line-height:1.5}
+
+/* ===== 底部 ===== */
+.footer{text-align:center;padding:8px 0 4px;font-size:10px;color:var(--text-placeholder)}
+.footer span{opacity:.7}
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <div class="title">XHS Assistant v2.3.0</div>
+<!-- 头部 -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-logo">📕</div>
+    <div>
+      <span class="header-title">小红书运营工具箱</span>
+      <span class="header-ver">v2.3.0</span>
+    </div>
+  </div>
+  <div class="header-sub">AI驱动的文案创作与数据分析助手</div>
+</div>
 
-  <div class="status-row">
-    <div class="dot" id="dotEl"></div>
-    <span id="statusEl" style="color:#888">Initializing...</span>
+<!-- 内容 -->
+<div class="content">
+
+  <!-- 页面检测 -->
+  <div class="card" style="padding:10px 14px">
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">检测中…</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">当前页面：</span>
+      <span class="page-badge other" id="pageBadge">—</span>
+    </div>
   </div>
 
-  <div class="page-info" id="pageEl">Checking page...</div>
-
-  <div class="toggle-row">
-    <span class="toggle-label">Enable</span>
-    <label class="toggle">
-      <input type="checkbox" id="chkEl" checked>
-      <span class="toggle-slider"></span>
-    </label>
+  <!-- 主要操作 -->
+  <div class="action-row">
+    <button class="btn btn-primary" id="btnSidePanel">
+      📌 打开侧边栏
+    </button>
+    <button class="btn btn-outline" id="btnScrape">
+      📥 抓取笔记
+    </button>
   </div>
 
-  <div class="divider"></div>
-
-  <button class="btn-full btn-primary" id="btnSide">Open SidePanel</button>
-  <button class="btn-full btn-secondary" id="btnScp">Scrape This Page</button>
-
-  <div class="divider"></div>
-
-  <div class="section-header" id="setHdr">
-    <span>[Config] AI Model Settings</span>
-    <span class="section-arrow" id="setArrow">&#x25BC;</span>
+  <!-- 启用开关 -->
+  <div class="card">
+    <div class="toggle-row">
+      <div class="toggle-left">
+        <span class="toggle-icon">🔌</span>
+        <div>
+          <div class="toggle-label">插件开关</div>
+          <div class="toggle-hint" id="toggleHint">已启用 · 正在运行</div>
+        </div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="chkEnable" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
   </div>
 
-  <div class="section-body" id="setBody">
-    <div class="prov-grid" id="provGrid">
-      <!-- 动态渲染，数据来自 background.js PROVIDERS -->
+  <!-- AI 设置 -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="settings-header" id="settingsHeader">
+      <div class="settings-left">
+        <span class="settings-icon">⚙️</span>
+        <span class="settings-label">AI 模型设置</span>
+      </div>
+      <span class="settings-arrow" id="settingsArrow">▼</span>
     </div>
+    <div class="settings-body" id="settingsBody">
+      <!-- 服务商选择 -->
+      <div style="margin-top:2px">
+        <div class="form-label">服务商</div>
+        <div class="prov-grid" id="provGrid"></div>
+      </div>
 
-    <div class="form-field">
-      <div class="form-label">API Endpoint</div>
-      <input type="text" class="form-input" id="inpEp" placeholder="选择服务商后自动填入">
-    </div>
-    <div class="form-field">
-      <div class="form-label">Model Name</div>
-      <input type="text" class="form-input" id="inpM" placeholder="选择服务商后自动填入">
-    </div>
-    <div class="form-field">
-      <div class="form-label">API Key</div>
-      <input type="password" class="form-input" id="inpKey" placeholder="sk-...">
-    </div>
-    <div class="form-field">
-      <div class="form-label">Max Tokens</div>
-      <input type="number" class="form-input" id="inpTk" value="2000">
-    </div>
+      <div class="form-group">
+        <label class="form-label">API 地址</label>
+        <input type="text" class="form-input" id="inpEndpoint" placeholder="选择服务商后自动填入">
+      </div>
 
-    <button class="btn-save" id="btnSv">Save Config</button>
-    <div class="msg-line" id="msgEl"></div>
-    <div class="cur-api" id="curApiEl"></div>
+      <div class="form-group" style="display:flex;gap:8px">
+        <div style="flex:1">
+          <label class="form-label">模型名称</label>
+          <input type="text" class="form-input" id="inpModel" placeholder="选择服务商后自动填入">
+        </div>
+        <div>
+          <label class="form-label">最大Token</label>
+          <input type="number" class="form-input" id="inpTokens" value="2000" min="100" max="8000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input type="password" class="form-input" id="inpKey" placeholder="sk-...">
+      </div>
+
+      <button class="btn-save" id="btnSave">💾 保存设置</button>
+      <div class="msg-line" id="msgLine"></div>
+      <div class="api-info" id="apiInfo"></div>
+    </div>
   </div>
 
-  <div class="footer">For XHS note pages</div>
+  <!-- 底部 -->
+  <div class="footer">
+    <span>仅在小红书笔记页面生效 · 数据本地处理</span>
+  </div>
+
 </div>
 
 <script src="popup.js"></script>

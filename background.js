@@ -1,7 +1,10 @@
 /**
- * background.js - 账号管理 + AI API 代理 + 消息路由
+ * background.js - 账号管理 + AI API 代理 + 消息路由 + Prompt模板库v2
  * MV3 Service Worker
  */
+
+// 加载 v2 Prompt 模板库（全局变量）
+importScripts('prompts-data.js');
 
 let CONFIG = {
   account: null,
@@ -281,13 +284,61 @@ async function handleMessage({ action, payload }, sender) {
     case 'checkText': {
       const text = payload.text;
       if (!text?.trim()) throw new Error('文案内容不能为空');
-      return { success: true, data: await aiComplete({ prompt: text, systemPrompt: getCheckSystem(), mode: 'check' }) };
+      // 先进行本地违禁词检测
+      const banResult = typeof checkBannedWords === 'function' ? checkBannedWords(text) : null;
+      let banReport = '';
+      if (banResult && !banResult.pass) {
+        banReport = `\n\n---\n📋 本地违禁词预检结果：\n级别：${banResult.level}级\n命中：${banResult.hits.join('、')}\n${banResult.message}`;
+        if (Object.keys(banResult.suggestions).length > 0) {
+          banReport += `\n替换建议：${JSON.stringify(banResult.suggestions)}`;
+        }
+      } else if (banResult && banResult.level === 'C') {
+        banReport = `\n\n---\n📋 本地预检：${banResult.message}\n命中词汇：${banResult.hits.join('、')}`;
+      }
+      // 再用 AI 做深度检测
+      const aiResult = await aiComplete({ prompt: text + banReport, systemPrompt: getCheckSystem(), mode: 'check' });
+      return { success: true, data: banReport ? aiResult + '\n\n' + banReport : aiResult };
     }
 
     case 'generateText': {
       const topic = payload.topic;
       if (!topic?.trim()) throw new Error('生成主题不能为空');
       return { success: true, data: await aiComplete({ prompt: topic, systemPrompt: getGenerateSystem(), mode: 'generate' }) };
+    }
+
+    // -------- v2 模板生成 --------
+    case 'generateWithTemplate': {
+      const { templateType, inputs, tone } = payload || {};
+      if (!templateType || !inputs) throw new Error('模板类型和输入不能为空');
+      const useV2 = typeof buildGenerationPrompt === 'function';
+      const { systemPrompt, userPrompt } = useV2
+        ? buildGenerationPrompt(templateType, inputs, tone)
+        : { systemPrompt: getGenerateSystem(), userPrompt: `主题：${inputs.topic || ''}` };
+      return { success: true, data: await aiComplete({ prompt: userPrompt, systemPrompt: systemPrompt, mode: 'generate' }) };
+    }
+
+    // -------- 违禁词独立检测 --------
+    case 'checkBannedWords': {
+      const text = payload.text;
+      if (!text?.trim()) throw new Error('文案内容不能为空');
+      if (typeof checkBannedWords !== 'function') throw new Error('违禁词检测模块未加载');
+      const result = checkBannedWords(text);
+      return { success: true, data: result };
+    }
+
+    // -------- 获取模板/语气列表（供UI） --------
+    case 'getTemplateList': {
+      if (typeof getTemplateList !== 'function') return { success: true, data: [] };
+      return { success: true, data: getTemplateList() };
+    }
+    case 'getToneList': {
+      if (typeof getToneList !== 'function') return { success: true, data: [] };
+      return { success: true, data: getToneList() };
+    }
+    case 'getTemplateDetail': {
+      const tplKey = payload?.key;
+      if (!tplKey || !XHS_TEMPLATES || !XHS_TEMPLATES[tplKey]) throw new Error('模板不存在');
+      return { success: true, data: XHS_TEMPLATES[tplKey] };
     }
 
     // -------- 分析车存储 --------
@@ -331,22 +382,11 @@ async function handleMessage({ action, payload }, sender) {
   }
 }
 
-// ========== System Prompts ==========
-function getAnalyzeSystem() {
-  return '你是一位专业的小红书内容分析师，擅长拆解爆款文案的底层逻辑。用emoji标出重点，语言简洁专业。';
-}
-
-function getRewriteSystem() {
-  return '你是一位资深内容编辑，擅长将AI味明显的文案改写成自然、真实、有温度的人类写作风格。语气自然口语化，有轻微不完美感；句子长短交错；保留原意但换表达；不用"首先...其次...最后"这种机械结构；不用"值得注意的是"这种套话。';
-}
-
-function getCheckSystem() {
-  return '你是一位内容安全审核专家，检测文案中的违禁词和风险表述，标注清晰，给出修改建议。';
-}
-
-function getGenerateSystem() {
-  return '你是小红书爆款文案专家。根据主题生成3条高互动文案，每条包含：标题 + 正文 + 标签建议。风格真实自然，有温度。';
-}
+// ========== System Prompts (v2 增强版) ==========
+function getAnalyzeSystem() { return getAnalyzeSystemV2(); }
+function getRewriteSystem() { return getRewriteSystemV2(); }
+function getCheckSystem()  { return getCheckSystemV2();  }
+function getGenerateSystem() { return getGenerateSystemV2(); }
 
 // ========== AI 调用 ==========
 async function aiComplete({ prompt, systemPrompt, mode }) {
@@ -509,6 +549,12 @@ async function aiComplete({ prompt, systemPrompt, mode }) {
     const sample = JSON.stringify(data).slice(0, 300);
     throw new Error('AI 返回内容为空，可能 API 余额不足或模型不可用。响应：' + sample);
   }
+
+  // C级词汇自动替换（改写模式 + 生成模式）
+  if ((mode === 'rewrite' || mode === 'generate') && typeof autoReplaceCWords === 'function') {
+    content = autoReplaceCWords(content);
+  }
+
   return content;
 }
 

@@ -138,6 +138,8 @@ function switchToTab(tabName) {
   if (target) target.classList.add('active');
   const panel = $(`#panel-${tabName}`);
   if (panel) panel.classList.add('active');
+  // 切换到模板页时刷新模板列表
+  if (tabName === 'templates') refreshTemplateList();
 }
 
 // =====================================================================
@@ -680,6 +682,254 @@ async function handleUnbindAccount() {
 }
 
 // =====================================================================
+// 模板生成模块
+// =====================================================================
+
+const _TPL = {
+  templates: [],
+  tones: [],
+  selectedTemplate: null,
+  selectedTone: null,
+  generating: false
+};
+
+async function refreshTemplateList() {
+  try {
+    const res = await chrome.runtime.sendMessage({ action: 'getTemplateList' });
+    if (res?.success && Array.isArray(res.data)) _TPL.templates = res.data;
+  } catch (_) {}
+  try {
+    const res = await chrome.runtime.sendMessage({ action: 'getToneList' });
+    if (res?.success && Array.isArray(res.data)) _TPL.tones = res.data;
+  } catch (_) {}
+  renderTemplateCards();
+}
+
+function renderTemplateCards() {
+  const grid = $('#templateGrid');
+  const hint = $('#tplEmptyHint');
+  if (!grid) return;
+
+  const templates = _TPL.templates.length > 0 ? _TPL.templates : [
+    { key: 'recommend', name: '种草体', icon: '\u{1F33F}', desc: '好物/好店推荐' },
+    { key: 'explore', name: '探店体', icon: '\u{1F37D}\u{FE0F}', desc: '美食/咖啡馆/小众店' },
+    { key: 'travel', name: '行程攻略体', icon: '\u{1F334}', desc: '旅行/城市攻略' },
+    { key: 'vlog', name: 'Vlog脚本体', icon: '\u{1F3AC}', desc: '短视频脚本分镜' },
+    { key: 'daily', name: '日签短文案', icon: '\u{1F4DD}', desc: '朋友圈/日常短文案' },
+    { key: 'review', name: '测评对比体', icon: '\u{1F4CA}', desc: '真实测评对比' }
+  ];
+
+  grid.innerHTML = templates.map(t => `
+    <div class="tpl-card${_TPL.selectedTemplate === t.key ? ' selected' : ''}" data-tpl="${t.key}">
+      <div class="tpl-icon">${t.icon || '\u{1F4DD}'}</div>
+      <div class="tpl-name">${t.name}</div>
+      <div class="tpl-desc">${t.desc || ''}</div>
+    </div>
+  `).join('');
+
+  // 绑定点击
+  grid.querySelectorAll('.tpl-card').forEach(card => {
+    card.addEventListener('click', () => selectTemplate(card.dataset.tpl));
+  });
+
+  // 如果之前有选中，保持表单显示
+  if (_TPL.selectedTemplate) {
+    selectTemplate(_TPL.selectedTemplate, true);
+  }
+
+  // 更新空状态
+  if (hint) hint.style.display = _TPL.selectedTemplate ? 'none' : 'block';
+}
+
+async function selectTemplate(tplKey, keepInputs) {
+  _TPL.selectedTemplate = tplKey;
+
+  // 更新卡片选中状态
+  document.querySelectorAll('.tpl-card').forEach(c => c.classList.toggle('selected', c.dataset.tpl === tplKey));
+
+  // 获取模板详情
+  let tpl = null;
+  // 先从缓存找
+  try {
+    const res = await chrome.runtime.sendMessage({ action: 'getTemplateDetail', payload: { key: tplKey } });
+    if (res?.success) tpl = res.data;
+  } catch (_) {}
+
+  // fallback: 使用本地默认定义
+  if (!tpl) {
+    const defaults = {
+      recommend: { name: '种草体', inputs: [
+        { key: 'name', label: '产品/店名', placeholder: '如：槟城街头榴莲摊' },
+        { key: 'selling_point', label: '核心卖点', placeholder: '如：现开猫山王，老板会挑熟度' },
+        { key: 'scenario', label: '个人使用场景', placeholder: '如：傍晚逛完街路过被香味吸引' },
+        { key: 'price', label: '价格区间', placeholder: '如：人均30-50RM' },
+        { key: 'target', label: '适合人群', placeholder: '如：榴莲爱好者' }
+      ]},
+      explore: { name: '探店体', inputs: [
+        { key: 'shop_name', label: '店名', placeholder: '如：胡同深处的独立咖啡馆' },
+        { key: 'category', label: '品类', placeholder: '咖啡/美食/酒吧/书店...' },
+        { key: 'signature', label: '招牌必点', placeholder: '如：手冲耶加雪菲+自制提拉米苏' },
+        { key: 'vibe', label: '环境氛围', placeholder: '如：老厂房改造，水泥墙+绿植' },
+        { key: 'cost', label: '人均消费', placeholder: '如：60-80元' },
+        { key: 'location_hours', label: '地址/营业时间', placeholder: '如：北京市东城区xx胡同 10:00-22:00' },
+        { key: 'story', label: '老板/店员故事（可选）', placeholder: '如：老板之前在澳洲做了8年咖啡' }
+      ]},
+      travel: { name: '行程攻略体', inputs: [
+        { key: 'destination', label: '目的地', placeholder: '如：槟城' },
+        { key: 'duration', label: '天数/时长', placeholder: '如：3天2夜' },
+        { key: 'theme', label: '主题标签', placeholder: '美食/户外/亲子/情侣/独行侠' },
+        { key: 'must_visit', label: '必去清单', placeholder: '如：升旗山、乔治市壁画街、汕头街夜市' },
+        { key: 'hidden_gems', label: '小众秘境', placeholder: '如：姓周桥旁边的秘密日落点' },
+        { key: 'budget', label: '预算范围', placeholder: '如：人均1500-2000元' }
+      ]},
+      vlog: { name: 'Vlog脚本体', inputs: [
+        { key: 'topic', label: '视频主题', placeholder: '如：一个人的治愈周末' },
+        { key: 'duration', label: '总时长（秒）', placeholder: '60' },
+        { key: 'scenes', label: '场景清单', placeholder: '如：起床、做早餐、咖啡馆、公园散步、回家看书' },
+        { key: 'mood', label: '情绪关键词', placeholder: '治愈/热血/搞笑/悬念' },
+        { key: 'music', label: 'BGM风格', placeholder: '轻快/氛围感/节奏感' }
+      ]},
+      daily: { name: '日签短文案', inputs: [
+        { key: 'scene', label: '今日场景', placeholder: '如：雨天在家煮了一壶热茶' },
+        { key: 'mood', label: '心情/感悟', placeholder: '如：慢下来的周末真好' },
+        { key: 'photo', label: '配图描述', placeholder: '如：窗边的茶壶冒着热气，猫窝在脚边' },
+        { key: 'context', label: '时间/天气', placeholder: '如：周六下午/小雨' }
+      ]},
+      review: { name: '测评对比体', inputs: [
+        { key: 'product', label: '测评对象', placeholder: '如：XX品牌的冻干咖啡' },
+        { key: 'compare_with', label: '对比项（可选）', placeholder: '如：和之前喝的3款速溶对比' },
+        { key: 'dimensions', label: '测评维度', placeholder: '口感/性价比/服务/环境...' },
+        { key: 'experience', label: '真实体验', placeholder: '如：喝了三天的真实感受...' },
+        { key: 'who_for', label: '适合人群', placeholder: '如：预算有限但不想降低品质的咖啡爱好者' }
+      ]}
+    };
+    tpl = defaults[tplKey] || { name: tplKey, inputs: [] };
+  }
+
+  // 显示表单
+  const form = $('#templateForm');
+  const hint = $('#tplEmptyHint');
+  if (form) form.style.display = 'block';
+  if (hint) hint.style.display = 'none';
+  $('#tplFormTitle').textContent = (tpl.icon || '') + ' ' + tpl.name;
+
+  // 渲染输入字段
+  renderInputFields(tpl.inputs || [], keepInputs);
+  // 渲染语气选择
+  renderToneSelector();
+}
+
+function renderInputFields(inputs, keepInputs) {
+  const container = $('#tplInputFields');
+  if (!container) return;
+
+  // 保存已有值（如果 keepInputs）
+  const existingValues = {};
+  if (keepInputs) {
+    container.querySelectorAll('input, textarea').forEach(el => {
+      existingValues[el.name] = el.value;
+    });
+  }
+
+  container.innerHTML = inputs.map(inp => `
+    <div class="tpl-field">
+      <label>${inp.label}</label>
+      ${(inp.key === 'experience' || inp.key === 'story' || inp.key === 'scenes')
+        ? `<textarea name="${inp.key}" placeholder="${inp.placeholder || ''}" rows="2">${existingValues[inp.key] || ''}</textarea>`
+        : `<input type="text" name="${inp.key}" placeholder="${inp.placeholder || ''}" value="${existingValues[inp.key] || ''}">`
+      }
+    </div>
+  `).join('');
+}
+
+function renderToneSelector() {
+  const container = $('#toneSelector');
+  if (!container) return;
+
+  const tones = _TPL.tones.length > 0 ? _TPL.tones : [
+    { key: '', name: '默认', desc: '不调整语气' },
+    { key: 'hot', name: '\u{1F525} 热血版', desc: '感叹号多、节奏快' },
+    { key: 'chill', name: '\u{1F343} 松弛版', desc: '长句、慵懒、反精致' },
+    { key: 'anti', name: '\u{1F4A2} 反套路版', desc: '反差、吐槽、真实' },
+    { key: 'dry', name: '\u{1F4A1} 干货版', desc: '短段落、实用' },
+    { key: 'story', name: '\u{1F4D6} 故事版', desc: '叙事感、细节' },
+    { key: 'savage', name: '\u{1F92D} 毒舌版', desc: '吐槽、犀利' }
+  ];
+
+  container.innerHTML = tones.map(t => `
+    <span class="tone-chip${_TPL.selectedTone === t.key ? ' selected' : ''}" data-tone="${t.key}" title="${t.desc || ''}">${t.name}</span>
+  `).join('');
+
+  container.querySelectorAll('.tone-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      _TPL.selectedTone = chip.dataset.tone || null;
+      container.querySelectorAll('.tone-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+}
+
+async function handleTemplateGenerate() {
+  if (_TPL.generating) return;
+  const tplKey = _TPL.selectedTemplate;
+  if (!tplKey) return;
+
+  // 收集输入值
+  const inputs = {};
+  const fields = document.querySelectorAll('#tplInputFields input, #tplInputFields textarea');
+  let hasValue = false;
+  fields.forEach(el => {
+    const val = el.value.trim();
+    if (val) hasValue = true;
+    inputs[el.name] = val;
+  });
+
+  if (!hasValue) {
+    const status = $('#tplStatus');
+    if (status) { status.textContent = '\u{26A0}\u{FE0F} 请至少填写一个字段'; status.style.color = '#f80'; }
+    return;
+  }
+
+  _TPL.generating = true;
+  const btn = $('#btnGenerateTpl');
+  const status = $('#tplStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '\u{23F3} 生成中...'; }
+  if (status) { status.textContent = '\u{23F3} 正在调用AI生成...'; status.style.color = '#888'; }
+
+  try {
+    const res = await chrome.runtime.sendMessage({
+      action: 'generateWithTemplate',
+      payload: {
+        templateType: tplKey,
+        inputs: inputs,
+        tone: _TPL.selectedTone || undefined
+      }
+    });
+    if (!res.success) throw new Error(res.error);
+
+    // 切换到对话标签显示结果
+    switchToTab('chat');
+    addMsg('user', `\u{1F4CB} 使用【${_TPL.templates.find(t => t.key === tplKey)?.name || tplKey}】模板生成`);
+    addMsg('assistant', res.data);
+
+    // 重置状态
+    if (btn) { btn.disabled = false; btn.textContent = '\u{2728} 生成文案'; }
+    if (status) { status.textContent = '\u{2705} 生成成功！结果已发送到对话标签'; status.style.color = '#52c41a'; }
+    setTimeout(() => { if (status) { status.textContent = ''; status.style.color = '#888'; } }, 3000);
+  } catch (err) {
+    if (status) { status.textContent = '\u{274C} 生成失败：' + err.message; status.style.color = '#ff4d4f'; }
+    if (btn) { btn.disabled = false; btn.textContent = '\u{2728} 生成文案'; }
+  }
+  _TPL.generating = false;
+}
+
+function initTemplates() {
+  $('#btnGenerateTpl')?.addEventListener('click', handleTemplateGenerate);
+  // 初始加载模板列表
+  refreshTemplateList();
+}
+
+// =====================================================================
 // 初始化入口
 // =====================================================================
 
@@ -715,6 +965,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 各模块初始化
   initChat();
+  initTemplates();
   initTools();
   await initCart();
   await initSettings();

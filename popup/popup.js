@@ -1,19 +1,18 @@
-// XHS Assistant popup.js — MV3 external script
+// 小红书运营工具箱 popup.js — v2.3.0
 // Provider 数据统一从 background.js 获取
 (function() {
   'use strict';
 
   function $(id) { return document.getElementById(id); }
 
-  // ========== 全局缓存：Provider 列表 ==========
+  // ========== 全局缓存 ==========
   let _providers = null;
 
-  function setDot(cls, txt) {
-    var dot = $('dotEl');
-    var st  = $('statusEl');
+  function setStatus(cls, txt) {
+    var dot = $('statusDot');
+    var st  = $('statusText');
     if (dot) {
-      dot.className = 'dot' + (cls ? ' ' + cls : '');
-      dot.style.background = cls === 'ok' ? '#52c41a' : cls === 'err' ? '#ff4d4f' : '#ccc';
+      dot.className = 'status-dot ' + (cls === 'ok' ? 'connected' : cls === 'err' ? 'error' : 'disconnected');
     }
     if (st) {
       st.textContent = txt || '';
@@ -22,24 +21,24 @@
   }
 
   function showMsg(txt, type) {
-    var el = $('msgEl');
+    var el = $('msgLine');
     if (!el) return;
     el.textContent = txt;
     el.style.color = type === 'ok' ? '#52c41a' : '#ff4d4f';
     if (type === 'ok') {
-      setTimeout(function() { var e = $('msgEl'); if (e) e.textContent = ''; }, 3000);
+      setTimeout(function() { var e = $('msgLine'); if (e) e.textContent = ''; }, 3000);
     }
   }
 
-  function updateCurApi(cfg) {
-    var el = $('curApiEl');
+  function updateApiInfo(cfg) {
+    var el = $('apiInfo');
     if (!el) return;
     var key = cfg && cfg.apiKey || '';
-    var masked = key ? key.slice(0,6) + '****' + key.slice(-4) : '(empty)';
-    el.textContent = (cfg && cfg.provider || '?').toUpperCase() + ' | ' + (cfg && cfg.model || '') + ' | Key:' + masked;
+    var masked = key ? key.slice(0,6) + '****' + key.slice(-4) : '(未填写)';
+    el.textContent = (cfg && cfg.provider || '?').toUpperCase() + ' · ' + (cfg && cfg.model || '') + ' · Key: ' + masked;
   }
 
-  // ========== 动态渲染 Provider 按钮 ==========
+  // ========== 渲染服务商按钮 ==========
   function renderProviders(providers, activeKey) {
     var grid = $('provGrid');
     if (!grid) return;
@@ -47,7 +46,7 @@
     Object.keys(providers).forEach(function(key) {
       var p = providers[key];
       var btn = document.createElement('button');
-      btn.className = 'prov' + (key === activeKey ? ' sel' : '');
+      btn.className = 'prov-btn' + (key === activeKey ? ' selected' : '');
       btn.dataset.p = key;
       btn.dataset.ep = p.endpoint || '';
       btn.dataset.m = p.model || '';
@@ -56,15 +55,22 @@
     });
   }
 
-  function syncProv(p) {
-    document.querySelectorAll('.prov').forEach(function(b) {
-      b.classList.toggle('sel', b.dataset.p === p);
+  function bindProvClicks() {
+    document.querySelectorAll('.prov-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.prov-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        var ep = $('inpEndpoint');
+        var m  = $('inpModel');
+        if (ep) ep.value = btn.dataset.ep || '';
+        if (m)  m.value  = btn.dataset.m || '';
+      });
     });
   }
 
   // ========== 初始化 ==========
   async function init() {
-    setDot('', 'Loading...');
+    setStatus('', '加载中…');
 
     // 1. 从 background 获取 provider 列表
     try {
@@ -74,77 +80,69 @@
       }
     } catch (_) {}
 
-    // 2. 加载已保存的配置
+    // 2. 加载配置
     chrome.storage.local.get(['xhsConfig'], function(r) {
       var cfg = r && r.xhsConfig;
       var enabled = cfg ? cfg.enabled !== false : true;
-      var chk = $('chkEl');
+      var chk = $('chkEnable');
       if (chk) chk.checked = enabled;
-      setDot(enabled ? 'ok' : '', enabled ? 'Enabled' : 'Disabled');
+
+      var hint = $('toggleHint');
+      if (hint) hint.textContent = enabled ? '已启用 · 正在运行' : '已停用 · 点击开启';
+      setStatus(enabled ? 'ok' : '', enabled ? '已连接' : '已停用');
 
       if (cfg && cfg.ai) {
         var ai = cfg.ai;
-        var ep  = $('inpEp');
-        var m   = $('inpM');
+        var ep  = $('inpEndpoint');
+        var m   = $('inpModel');
         var key = $('inpKey');
-        var tk  = $('inpTk');
+        var tk  = $('inpTokens');
         if (ep)  ep.value  = ai.endpoint || '';
         if (m)   m.value   = ai.model || '';
         if (key) key.value = ai.apiKey || '';
         if (tk)  tk.value  = ai.maxTokens || 2000;
-        updateCurApi(ai);
+        updateApiInfo(ai);
       }
 
-      // 3. 渲染 provider 按钮（延迟到 provider 数据就绪 + 配置就绪）
+      // 3. 渲染 provider 按钮
       var activeProvider = (cfg && cfg.ai && cfg.ai.provider) || 'minimax';
       if (_providers) {
         renderProviders(_providers, activeProvider);
         bindProvClicks();
       } else {
-        // fallback: 无 providers 数据，稍后重试
         setTimeout(function() {
           if (_providers) {
             renderProviders(_providers, activeProvider);
             bindProvClicks();
           }
-        }, 300);
+        }, 400);
       }
     });
 
-    // 检测页面类型
+    // 检测当前页面
     chrome.tabs.query({active:true, currentWindow:true}, function(tabs) {
       var tab = tabs && tabs[0];
-      var pel = $('pageEl');
-      if (!pel) return;
-      if (tab && tab.url && tab.url.indexOf('xiaohongshu') !== -1) {
-        pel.textContent = 'XHS: ' + (tab.title||'').slice(0,50);
-        pel.style.color = '#52c41a';
+      var badge = $('pageBadge');
+      if (!badge) return;
+      if (tab && tab.url && (tab.url.indexOf('xiaohongshu') !== -1 || tab.url.indexOf('xhs.cn') !== -1)) {
+        badge.textContent = '📕 ' + (tab.title||'').slice(0,35);
+        badge.className = 'page-badge xhs';
       } else {
-        pel.textContent = 'Not XHS - open a note first';
-        pel.style.color = '#888';
+        badge.textContent = '⚠️ 非小红书页面，功能受限';
+        badge.className = 'page-badge other';
       }
     });
   }
 
-  function bindProvClicks() {
-    document.querySelectorAll('.prov').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('.prov').forEach(function(b) { b.classList.remove('sel'); });
-        btn.classList.add('sel');
-        var ep = $('inpEp');
-        var m  = $('inpM');
-        if (ep) ep.value = btn.dataset.ep || '';
-        if (m)  m.value  = btn.dataset.m || '';
-      });
-    });
-  }
-
+  // ========== 事件绑定 ==========
   function bind() {
-    // enable toggle
-    var chk = $('chkEl');
+    // 插件开关
+    var chk = $('chkEnable');
     if (chk) {
       chk.addEventListener('change', function() {
-        setDot(chk.checked ? 'ok' : '', chk.checked ? 'Enabled' : 'Disabled');
+        var hint = $('toggleHint');
+        if (hint) hint.textContent = chk.checked ? '已启用 · 正在运行' : '已停用 · 点击开启';
+        setStatus(chk.checked ? 'ok' : '', chk.checked ? '已连接' : '已停用');
         chrome.storage.local.get(['xhsConfig'], function(r) {
           var cfg = (r && r.xhsConfig) || {};
           cfg.enabled = chk.checked;
@@ -153,79 +151,81 @@
       });
     }
 
-    // sidepanel
-    var btnSide = $('btnSide');
+    // 打开侧边栏
+    var btnSide = $('btnSidePanel');
     if (btnSide) {
       btnSide.addEventListener('click', function() {
         chrome.tabs.create({ url: 'sidepanel/sidepanel.html', active: true });
       });
     }
 
-    // scrape
-    var btnScp = $('btnScp');
-    if (btnScp) {
-      btnScp.addEventListener('click', function() {
-        btnScp.disabled = true;
-        btnScp.textContent = 'Scraping...';
+    // 抓取笔记
+    var btnScrape = $('btnScrape');
+    if (btnScrape) {
+      btnScrape.addEventListener('click', function() {
+        btnScrape.disabled = true;
+        btnScrape.textContent = '⏳ 抓取中…';
         chrome.tabs.query({active:true, currentWindow:true}, function(tabs) {
           var tab = tabs && tabs[0];
           if (!tab) {
-            btnScp.disabled = false;
-            btnScp.textContent = 'Scrape This Page';
-            var pel = $('pageEl');
-            if (pel) { pel.textContent = 'Cannot get tab'; pel.style.color='#ff4d4f'; }
+            resetScrapeBtn(btnScrape, '无法获取标签页');
             return;
           }
           chrome.tabs.sendMessage(tab.id, {action:'scrape'}, function(res) {
-            btnScp.disabled = false;
-            btnScp.textContent = 'Scrape This Page';
+            btnScrape.disabled = false;
+            btnScrape.textContent = '📥 抓取笔记';
             if (chrome.runtime.lastError) {
-              var pel = $('pageEl');
-              if (pel) { pel.textContent = 'Content script not loaded. Refresh XHS page.'; pel.style.color='#ff4d4f'; }
-              setDot('err', 'Error');
+              var badge = $('pageBadge');
+              if (badge) { badge.textContent = '⚠️ 请刷新小红书页面后重试'; badge.className = 'page-badge other'; }
+              setStatus('err', '未检测到页面');
               return;
             }
             if (res && res.success) {
-              var t = (res.data && res.data.title) || 'No title';
-              var pel = $('pageEl');
-              if (pel) { pel.textContent = 'OK: ' + t.slice(0,40); pel.style.color='#52c41a'; }
-              setDot('ok', 'Done');
+              var t = (res.data && res.data.title) || '无标题';
+              setStatus('ok', '抓取成功');
+              var badge = $('pageBadge');
+              if (badge) { badge.textContent = '✅ ' + t.slice(0,30); badge.className = 'page-badge xhs'; }
             } else {
-              var pel = $('pageEl');
-              if (pel) { pel.textContent = 'Error: ' + (res&&res.error||'Unknown'); pel.style.color='#ff4d4f'; }
-              setDot('err', 'Error');
+              setStatus('err', '抓取失败');
+              var badge = $('pageBadge');
+              if (badge) { badge.textContent = '❌ ' + (res&&res.error||'未知错误'); badge.className = 'page-badge other'; }
             }
           });
         });
       });
     }
 
-    // settings toggle
-    var setHdr   = $('setHdr');
-    var setBody  = $('setBody');
-    var setArrow = $('setArrow');
-    if (setHdr && setBody) {
+    // 设置面板折叠
+    var setHdr   = $('settingsHeader');
+    var setBody  = $('settingsBody');
+    var setArrow = $('settingsArrow');
+    if (setHdr && setBody && setArrow) {
       setHdr.addEventListener('click', function() {
-        var open = setBody.style.display === 'block';
-        setBody.style.display = open ? 'none' : 'block';
-        if (setArrow) setArrow.style.transform = open ? '' : 'rotate(180deg)';
+        var open = setBody.classList.contains('open');
+        if (open) {
+          setBody.classList.remove('open');
+          setArrow.classList.remove('open');
+        } else {
+          setBody.classList.add('open');
+          setArrow.classList.add('open');
+        }
       });
     }
 
-    // save config
-    var btnSv = $('btnSv');
-    if (btnSv) {
-      btnSv.addEventListener('click', function() {
-        var ep  = $('inpEp')   ? $('inpEp').value.trim()   : '';
-        var m   = $('inpM')   ? $('inpM').value.trim()     : '';
-        var key = $('inpKey') ? $('inpKey').value.trim()  : '';
-        var tk  = $('inpTk')  ? (parseInt($('inpTk').value) || 2000) : 2000;
+    // 保存设置
+    var btnSave = $('btnSave');
+    if (btnSave) {
+      btnSave.addEventListener('click', function() {
+        var ep  = $('inpEndpoint') ? $('inpEndpoint').value.trim() : '';
+        var m   = $('inpModel')    ? $('inpModel').value.trim()    : '';
+        var key = $('inpKey')      ? $('inpKey').value.trim()      : '';
+        var tk  = $('inpTokens')   ? (parseInt($('inpTokens').value) || 2000) : 2000;
 
-        if (!ep)  { showMsg('Fill Endpoint', 'err'); return; }
-        if (!m)   { showMsg('Fill Model',     'err'); return; }
-        if (!key) { showMsg('Fill API Key',   'err'); return; }
+        if (!ep)  { showMsg('请填写 API 地址', 'err'); return; }
+        if (!m)   { showMsg('请填写模型名称',   'err'); return; }
+        if (!key) { showMsg('请填写 API Key',   'err'); return; }
 
-        var sel = document.querySelector('.prov.sel');
+        var sel = document.querySelector('.prov-btn.selected');
         var provider = sel ? sel.dataset.p : 'custom';
         var newAi = { provider: provider, endpoint: ep, model: m, apiKey: key, maxTokens: tk, temperature: 0.7 };
 
@@ -234,11 +234,11 @@
           cfg.ai = newAi;
           chrome.storage.local.set({xhsConfig: cfg}, function() {
             if (chrome.runtime.lastError) {
-              showMsg('Save failed: ' + chrome.runtime.lastError.message, 'err');
+              showMsg('保存失败：' + chrome.runtime.lastError.message, 'err');
               return;
             }
-            showMsg('Saved OK', 'ok');
-            updateCurApi(newAi);
+            showMsg('✅ 设置已保存', 'ok');
+            updateApiInfo(newAi);
           });
         });
       });

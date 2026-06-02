@@ -9,16 +9,14 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{width:100%;min-height:100dvh;font-family:var(--font-family);background:var(--bg-body);font-size:13px;color:var(--text-primary);display:flex;flex-direction:column;height:100dvh}
 
-/* 头部 */
-.panel-header{background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;padding:14px 16px;border-radius:0 0 16px 16px;flex-shrink:0}
-.panel-header h1{font-size:15px;font-weight:600}
-.panel-header p{font-size:11px;opacity:0.85;margin-top:2px}
+/* 头部（样式见下方统一定义） */
 
 /* Tab导航 */
-.tabs{display:flex;background:var(--bg-card);padding:6px 12px;gap:4px;border-bottom:1px solid var(--border-color);flex-shrink:0}
-.tab{flex:1;padding:7px 4px;text-align:center;border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s;background:#f5f5f5;color:#666}
-.tab.active{background:#ff2442;color:#fff;font-weight:600}
-.tab:not(.active):hover{background:#ffe8ea}
+.tabs{display:flex;background:var(--bg-card);padding:6px 10px;gap:3px;border-bottom:1px solid var(--border-color);flex-shrink:0;overflow-x:auto}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:44px;padding:7px 4px;text-align:center;border-radius:8px;font-size:11px;cursor:pointer;transition:all .2s;background:var(--bg-hover);color:var(--text-secondary);white-space:nowrap;font-weight:500}
+.tab.active{background:var(--xhs-gradient);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(255,36,66,.25)}
+.tab:not(.active):hover{background:#ffe8ea;color:#ff2442}
 
 /* 主内容区 */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -80,21 +78,51 @@ body{width:100%;min-height:100dvh;font-family:var(--font-family);background:var(
 /* 设置页 */
 .settings-panel{display:none;flex-direction:column;gap:10px;padding:12px;flex:1;overflow-y:auto}
 .settings-panel.active{display:flex}
-.settings-panel h3{font-size:13px;color:#888;margin-bottom:2px}
-.form-row label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-.form-row input,.form-row select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
-.form-row input:focus,.form-row select:focus{outline:none;border-color:#ff2442}
-.form-hint{font-size:10px;color:#aaa;margin-top:3px}
-.btn-save{width:100%;padding:10px;border-radius:10px;border:none;background:#ff2442;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
-.btn-save:hover{background:#e6193a}
+.settings-panel h3{font-size:13px;color:var(--text-secondary);margin-bottom:2px}
+.settings-card{background:var(--bg-card);border-radius:12px;padding:14px;box-shadow:var(--shadow-sm)}
+.settings-card-title{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-primary)}
+.form-row{margin-bottom:10px}
+.form-row:last-child{margin-bottom:0}
+.form-row label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:500}
+.form-row input,.form-row select{width:100%;padding:9px 10px;border:1.5px solid var(--border-input);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg-input);color:var(--text-primary);transition:border-color .2s}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:#ff2442;box-shadow:0 0 0 3px rgba(255,36,66,.06)}
+.form-hint{font-size:10px;color:var(--text-muted);margin-top:3px}
+.btn-save{width:100%;padding:10px;border-radius:10px;border:none;background:var(--xhs-gradient);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-save:hover{box-shadow:0 4px 16px rgba(255,36,66,.3);transform:translateY(-1px)}
+.btn-save:active{transform:scale(.97)}
 
 /* 状态指示 */
-.status-mini{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-card);border-radius:8px;font-size:11px;color:var(--text-secondary);border:1px solid var(--border-color)}
-.status-mini .dot{width:6px;height:6px;border-radius:50%;background:#ccc;flex-shrink:0}
-.status-mini .dot.ok{background:#00c853}
-.status-mini .dot.err{background:#ff4d4d}
+.status-mini{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-card);border-radius:10px;font-size:12px;color:var(--text-secondary);box-shadow:var(--shadow-sm)}
+.status-mini .dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;transition:background .3s}
+.status-mini .dot.ok{background:#00c853;box-shadow:0 0 6px rgba(0,200,83,.3)}
+.status-mini .dot.err{background:#ff4d4d;box-shadow:0 0 6px rgba(255,77,79,.3)}
 .status-mini .dot.loading{background:#ffa500;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* 面板头部 */
+.panel-header{background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;padding:18px 20px;border-radius:0 0 16px 16px;flex-shrink:0}
+.panel-header h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.panel-header p{font-size:11px;opacity:.8;margin-top:4px;font-weight:400}
+
+/* 模板选择卡片 */
+.tpl-card{background:var(--bg-card);border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;border:2px solid transparent;box-shadow:var(--shadow-sm);transition:all .2s;font-size:11px}
+.tpl-card:hover{border-color:#ffb3be}
+.tpl-card.selected{border-color:#ff2442;background:var(--xhs-primary-light,#fff0f2)}
+.tpl-card .tpl-icon{font-size:20px;margin-bottom:2px}
+.tpl-card .tpl-name{font-weight:600;font-size:11px}
+.tpl-card .tpl-desc{font-size:9px;color:#999;margin-top:1px}
+
+/* 语气选择按钮 */
+.tone-chip{padding:4px 10px;border-radius:14px;border:1px solid #ddd;background:#fff;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tone-chip:hover{border-color:#ffb3be}
+.tone-chip.selected{background:#fff0f2;border-color:#ff2442;color:#ff2442;font-weight:600}
+
+/* 模板输入字段 */
+.tpl-field{margin-bottom:2px}
+.tpl-field label{display:block;font-size:11px;color:#888;margin-bottom:2px}
+.tpl-field input,.tpl-field textarea{width:100%;padding:7px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box}
+.tpl-field input:focus,.tpl-field textarea:focus{border-color:#ff2442}
+.tpl-field textarea{min-height:48px;resize:vertical}
 
 /* 空状态 */
 .empty-hint{text-align:center;color:var(--text-placeholder, #aaa);font-size:12px;padding:40px 20px;line-height:1.8}
@@ -111,6 +139,7 @@ body{width:100%;min-height:100dvh;font-family:var(--font-family);background:var(
 <!-- Tab导航 -->
 <div class="tabs">
   <div class="tab active" data-tab="chat">💬 对话</div>
+  <div class="tab" data-tab="templates">📋 模板</div>
   <div class="tab" data-tab="tools">🛠 工具</div>
   <div class="tab" data-tab="author">👤 博主</div>
   <div class="tab" data-tab="cart">📦 分析车</div>
@@ -239,6 +268,51 @@ body{width:100%;min-height:100dvh;font-family:var(--font-family);background:var(
         <button id="btnExportMD" disabled style="flex:1;padding:6px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:11px;cursor:pointer;color:#666">📝 MD</button>
       </div>
       <div id="cartHint" style="text-align:center;color:#aaa;font-size:11px;margin-top:6px">浏览笔记时点击「📦 加入分析车」即可收集</div>
+    </div>
+  </div>
+
+  <!-- ===== 模板生成页 ===== -->
+  <div class="tool-panel" id="panel-templates">
+    <div style="padding:8px 4px">
+      <div style="font-size:12px;color:#888;margin-bottom:10px">选择文案场景模板，填写信息后一键生成</div>
+
+      <!-- 模板选择网格 -->
+      <div id="templateGrid" class="func-grid" style="grid-template-columns:1fr 1fr 1fr;gap:4px">
+        <!-- 动态渲染 -->
+      </div>
+
+      <!-- 选中模板的输入区 -->
+      <div id="templateForm" style="display:none;margin-top:12px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-primary)">
+          <span id="tplFormTitle"></span>
+        </div>
+
+        <!-- 动态输入字段 -->
+        <div id="tplInputFields" style="display:flex;flex-direction:column;gap:8px"></div>
+
+        <!-- 语气选择 -->
+        <div style="margin-top:10px">
+          <div style="font-size:11px;color:#888;margin-bottom:4px">语气风格（可选）</div>
+          <div id="toneSelector" style="display:flex;flex-wrap:wrap;gap:4px">
+            <!-- 动态渲染 -->
+          </div>
+        </div>
+
+        <!-- 生成按钮 -->
+        <button id="btnGenerateTpl" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#ff2442,#ff6b81);color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">
+          ✨ 生成文案
+        </button>
+
+        <!-- 状态 -->
+        <div id="tplStatus" style="font-size:11px;text-align:center;margin-top:6px;min-height:18px;color:#888"></div>
+      </div>
+
+      <!-- 空状态提示 -->
+      <div id="tplEmptyHint" style="text-align:center;color:#aaa;font-size:12px;padding:24px 0;line-height:1.8">
+        <div style="font-size:32px;margin-bottom:8px;opacity:.5">📋</div>
+        选择一个模板类型开始生成<br>
+        <span style="font-size:10px;color:#ccc">6大场景模板 + 6种语气风格</span>
+      </div>
     </div>
   </div>
 
