@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw2HTV39Y2X9/I51dRoNlI4d5HlkcFLPCubQj9mnTMP9n1CY8EJJHo43h7k5ee0AvwB/UZZ5/4ZWSO6Yb4X0mI2YY/qrUG36uVyeZRh+ASVnNOpnNsYbasxcq1zliMYrVdiFtlSd5qDZ6BiG3fnF1q/CcKCdr2tBGccmdLIM5I7liOrg3BFK6uJ1KXm1kOCaTEvM7Jtzo9Nfn/6vRzKCwqAAfCPn96F7l9q0xpORYHP7+JL8Yka9c2vP/3kHwRm+VMgtHnJz/76IEQMnkMCxsns0dEgkZMqpSUhRGAegYh5Cdc5x+2eiLyEBqaVfys+gLsOK4PoyrRBAzDiYGjB52JwIDAQAB",
   "name": "小红书运营工具箱",
-  "version": "2.3.0",
-  "description": "小红书运营必备：抓取/分析/改写/生成，100%本地DOM读取，不爬虫不封号",
-
+  "version": "2.44.2",
+  "description": "小红书运营必备：抓取/分析/改写/生成 + 创作者中心数据中心，100%本地DOM读取，不爬虫不封号",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "clipboardWrite",
     "activeTab",
     "sidePanel",
     "tabs",
+    "alarms",
     "cookies"
   ],
   "host_permissions": [
@@ -24,7 +26,9 @@
     "https://api.siliconflow.cn/*",
     "https://api.bigmodel.cn/*",
     "https://open.bigmodel.cn/*",
-    "https://dashscope.aliyuncs.com/*"
+    "https://dashscope.aliyuncs.com/*",
+    "http://127.0.0.1:8123/*",
+    "http://127.0.0.1:8645/*"
   ],
   "icons": {
     "16": "icons/icon16.png",
@@ -41,12 +45,11 @@
     }
   },
   "action": {
-    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"
     },
-    "default_title": "小红书运营工具箱"
+    "default_title": "打开小红书运营工具箱"
   },
   "side_panel": {
     "default_path": "sidepanel/sidepanel.html"
@@ -60,15 +63,34 @@
         "https://*.xiaohongshu.com/*",
         "https://*.xhs.cn/*"
       ],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.xiaohongshu.com/*",
+        "https://*.xhs.cn/*"
+      ],
+      "js": [
+        "net-listener.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "content_security_policy": {

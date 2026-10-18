@@ -1,0 +1,878 @@
+/* ============================================================
+   panels.css —— 旧面板专属组件样式
+   --------------------------------------------------------
+   从 sidepanel.html 的内联 <style> 抽出来的（v2.7.2）。
+   抽出来的原因有两个：
+     1. 内联样式在 <link> 之后加载，会**反向覆盖** common.css / shell.css ——
+        v2.7.0 就是因为这个把「设置」按钮弄没了。
+     2. 抽出来后设计实验室（dev/preview.html）能 link 它，
+        从而渲染并验证全部 10 个面板，而不是只能验新写的 3 个。
+
+   本文件只放「各面板私有」的组件样式；令牌在 common.css，骨架在 shell.css。
+   ============================================================ */
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* 头部（样式见下方统一定义） */
+
+
+/* 主内容区 */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* ===== 消息流 ===== */
+.message-area{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.message-area::-webkit-scrollbar{width:4px}
+.message-area::-webkit-scrollbar-thumb{background:var(--border-control);border-radius:2px}
+
+.msg{display:flex;gap:8px;animation:fadeIn var(--dur-2) var(--ease)}
+.msg.user{flex-direction:row-reverse}
+.msg .avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:var(--fs-label)}
+.msg.user .avatar{background:var(--accent-solid);color:var(--on-accent)}
+.msg.assistant .avatar{background:var(--ink);color:var(--ink-2)}
+/* 气泡宽度：AI 的回答才是这个面板的主内容，不该被挤成十几字一行的窄条。
+   原来 max-width:80% 是对头像+间距后再取八成，400px 侧栏里正文列只剩
+   ~170px，一行 14 个汉字 —— 读起来像被切碎的。改为占满头像右侧剩余空间；
+   用户自己发的话通常很短，保留上限，顺便维持左右不对称的那点「对话感」。 */
+.msg .bubble{max-width:100%;padding:8px 12px;border-radius:12px;font-size:var(--fs-label);line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.msg.user .bubble{max-width:78%}
+.msg.user .bubble{background:var(--accent-solid);color:var(--on-accent);border-bottom-right-radius:4px}
+.msg.assistant .bubble{background:var(--surface);color:var(--ink);border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.msg.tool .bubble{background:var(--bubble-info-bg);color:var(--bubble-info-ink);font-size:var(--fs-caption);border:1px solid var(--bubble-info-border);border-radius:8px}
+.msg.error .bubble{background:var(--bubble-error-bg);color:var(--bubble-error-ink);border:1px solid var(--bubble-error-border);border-radius:8px;font-size:var(--fs-caption)}
+
+.msg.loading .bubble{display:flex;align-items:center;gap:var(--sp-1);color:var(--ink-3);font-size:var(--fs-caption)}
+.msg.loading .bubble::after{content:'';width:14px;height:14px;border:2px solid var(--border-control);border-top-color:var(--accent);border-radius:50%;animation:spin var(--dur-loop) linear infinite;flex-shrink:0}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== 输入区 ===== */
+.input-area{flex-shrink:0;border-top:1px solid var(--border);background:var(--surface);padding:var(--sp-2) var(--sp-3)}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+/* 对话输入框。
+   ⚠️ max-height 原来只有 100px = 4 行，而「粘贴一篇笔记让 AI 改写」
+   是这个输入框的核心场景 —— 用户只能看到最后 4 行，不知道自己在输入什么，
+   而且 resize:none 连手拖都不行。这就是「没法设置」的根因。
+   提到 min(46vh, 280px) ≈ 13 行，够放一篇完整笔记。
+
+   ⚠️ 这个值是**唯一来源**，不要在 JS 里再写一遍。
+   早期版本两边各有一个魔法数字（这里 100、sidepanel.js 的 CHAT_MAX_H 100），
+   改一处忘另一处就会出现「框长到一半、字还在涨」。
+   现在 sidepanel.js 的 maxH() 用 getComputedStyle 读这里的 max-height，
+   常量 CHAT_MAX_H 已删除 —— 这条注释原来还指着它，那是过期事实，
+   比不写更容易让人以为必须同步改两处。 */
+.input-area textarea{flex:1;min-height:40px;max-height:min(46vh,280px);padding:var(--sp-2) var(--sp-3);border:1px solid var(--border-control);border-radius:var(--r-sm);font-size:var(--fs-body);resize:none;line-height:1.5;font-family:inherit;overflow-y:auto}
+.input-area textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.input-area textarea:focus{border-color:var(--accent)}
+/* 只作用于输入行里的发送按钮；下方 .action-row 里的 .qa 快捷按钮有自己的类。
+   发送是图标按钮，落在 AGENTS.md 的 44×44 适用范围里。 */
+.input-row button{width:44px;height:44px;border-radius:var(--r-md);border:none;background:var(--accent-solid);color:var(--on-accent);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background var(--dur-2) var(--ease)}
+.input-row button:hover{background:var(--accent-hover)}
+.input-row button:disabled{background:var(--border-strong);cursor:not-allowed}
+.input-row button:active:not(:disabled){transform:scale(.95)}
+
+/* 极窄（<340px）：输入框独占一行，两个图标按钮换到第二行靠右。
+   量测：320 画布里 .input-row 净宽只有 184px，两个 44px 按钮 + 16px 间隔
+   一扣，输入框只剩 **80px** —— 15px 中文只能放 5 个字，
+   连占位符都要折成四行。这是**主场景不是边缘情况**：320px 就是 Chrome
+   侧栏能拖到的最窄位置（见 shell.css 的注释）。
+
+   两个按钮保持 44×44 不动：触控目标那一维不能靠缩尺寸来换宽度。
+   多花的 44px 高度，换回来的是一个能用的输入框。 */
+.sp-body.is-tiny .input-row{flex-wrap:wrap;justify-content:flex-end}
+.sp-body.is-tiny .input-area textarea{flex:1 0 100%}
+
+/* ===== 功能面板（侧边工具栏风格） ===== */
+.tool-panel{display:none;flex-direction:column;gap:var(--sp-2);padding:var(--sp-3);flex:1;overflow-y:auto}
+.tool-panel.active{display:flex}
+
+/* 网格项默认 min-width:auto，会被 .desc 的 min-content 顶开。
+   320px 下限画布里「搜索/发现页批量抓取」这类说明把整列推出可视区，
+   右列卡片被切掉。min-width:0 + overflow-wrap 一起给，缺一不可。 */
+.func-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2)}
+.func-grid.cols-3{grid-template-columns:repeat(3,1fr);gap:var(--sp-1)}
+.func-item{background:var(--surface);border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;border:2px solid transparent;box-shadow:var(--shadow-1);transition:all var(--dur-2) var(--ease);font-size:var(--fs-caption);min-width:0}
+.func-item:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(255,36,66,.15)}
+.func-item .icon{margin-bottom:4px}
+.func-item .label{font-weight:600;margin-bottom:2px}
+.func-item .desc{font-size:var(--fs-micro);color:var(--ink-3);overflow-wrap:anywhere;line-height:1.4}
+
+/* 博主分析卡 */
+.author-card{background:var(--surface);border-radius:12px;padding:var(--r-md);box-shadow:var(--shadow-1)}
+.author-card .author-top{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2)}
+.author-card .author-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent-weak);display:flex;align-items:center;justify-content:center;font-size:var(--fs-num);flex-shrink:0}
+.author-card .author-name{font-size:var(--fs-label);font-weight:600}
+.author-card .author-id{font-size:var(--fs-micro);color:var(--ink-3)}
+.author-card .author-stats{display:flex;gap:var(--sp-4);margin-top:var(--sp-2)}
+.author-card .stat{text-align:center}
+/* 数字用主文字色，不用品牌红。红色只留给：选中指示、主操作、AI 建议卡。
+   三个数据全染红会让「哪个是重点」失效。 */
+.author-card .stat .num{
+  font-size:var(--fs-title);font-weight:650;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.25;
+}
+.author-card .stat .lbl{font-size:var(--fs-micro);color:var(--ink-3)}
+
+/* 设置页 */
+.settings-panel{display:none;flex-direction:column;gap:var(--sp-2);padding:var(--sp-3);flex:1;overflow-y:auto}
+.settings-panel.active{display:flex}
+.settings-panel h3{font-size:var(--fs-label);color:var(--ink-2);margin-bottom:2px}
+.settings-card{background:var(--surface);border-radius:12px;padding:var(--r-md);box-shadow:var(--shadow-1)}
+.settings-card-title{font-size:var(--fs-label);font-weight:600;margin-bottom:var(--sp-2);color:var(--ink)}
+.form-row{margin-bottom:var(--sp-2)}
+.form-row:last-child{margin-bottom:0}
+.form-row label{display:block;font-size:var(--fs-caption);color:var(--ink-2);margin-bottom:4px;font-weight:500}
+.form-row input,.form-row select{width:100%;padding:var(--sp-2) var(--sp-3);border:1.5px solid var(--border-control);border-radius:8px;font-size:var(--fs-label);font-family:var(--font-family);background:var(--surface);color:var(--ink);transition:border-color var(--dur-2) var(--ease)}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
+.form-row input:focus-visible,.form-row select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.form-hint{font-size:var(--fs-micro);color:var(--ink-3);margin-top:var(--sp-1)}
+.btn-save{width:100%;padding:var(--sp-3);border-radius:var(--r-sm);border:none;background:var(--accent-solid);color:var(--on-accent);font-size:var(--fs-label);font-weight:600;cursor:pointer;transition:all var(--dur-2) var(--ease)}
+.btn-save:hover{background:var(--accent-hover);box-shadow:0 4px 16px rgba(255,36,66,.3);transform:translateY(-1px)}
+.btn-save:active{transform:scale(.97)}
+
+/* 状态指示 */
+.status-mini{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--sp-3);background:var(--surface);border-radius:var(--r-sm);font-size:var(--fs-caption);color:var(--ink-2);box-shadow:var(--shadow-1)}
+.status-mini .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-disabled);flex-shrink:0;transition:background var(--dur-2) var(--ease)}
+.status-mini .dot.ok{background:var(--success);box-shadow:0 0 6px rgba(0,200,83,.3)}
+.status-mini .dot.err{background:var(--danger);box-shadow:0 0 6px rgba(255,77,79,.3)}
+.status-mini .dot.loading{background:var(--warning);animation:pulse var(--dur-pulse) ease-in-out infinite}
+/* pulse 与 spin 的 @keyframes 都由 common.css 唯一定义。
+   之前这里也有一份 pulse，但振幅是 .4 而 common 是 .55 —— 同名不同值，
+   谁生效全看加载顺序，属于「说不清现在到底是哪个」的那种隐患。 */
+
+/* 面板头部 */
+/* ============================================================
+   布局骨架：导航轨道 + 内容舞台
+   body 改成 flex 横向两栏，导航不再占用垂直空间
+   ============================================================ */
+/* 骨架与 today 面板样式已移至 shell.css / common.css，此处不再重复定义（重复会覆盖它们）。 */
+
+/* 模板选择卡片 */
+.tpl-card{background:var(--surface);border-radius:var(--r-sm);padding:var(--r-sm) var(--r-sm);cursor:pointer;text-align:center;border:2px solid transparent;box-shadow:var(--shadow-1);transition:all var(--dur-2) var(--ease);font-size:var(--fs-micro);min-width:0}
+/* min-width:0 与卡片内文字的断行规则 ——
+   「行程攻略体」5 字 + 「旅行/城市攻略」描述，在三列网格里
+   的最小宽度超过格宽，于是整条轨道被撑宽、第三列被推出容器被裁。
+   缺了 min-width:0 时 grid 项**拒绝收缩到内容宽度以下**。 */
+.tpl-card .tpl-name{font-weight:600;font-size:var(--fs-label);overflow-wrap:anywhere}
+.tpl-card .tpl-desc{font-size:var(--fs-micro);color:var(--ink-3);margin-top:var(--sp-1);overflow-wrap:anywhere}
+.tpl-card:hover{border-color:var(--accent-edge)}
+.tpl-card.selected{border-color:var(--accent);background:var(--accent-weak)}
+.tpl-card .tpl-icon{margin-bottom:2px}
+/* ⚠️ 原来 .tpl-name 是 11px、.tpl-desc 是 9px。
+   9px 在中文界面里几乎读不出来（AGENTS.md 底线 10px），
+   而 6 个场景卡片的说明文字正是用户判断「该选哪个模板」的唯一依据 ——
+   字太小等于没写。提到 12/11px，卡片高度不变（行高本来就够）。 */
+
+/* 语气选择按钮 */
+.tone-chip{padding:var(--sp-1) var(--sp-3);border-radius:var(--r-md);border:1px solid var(--border-control);background:var(--surface);font-size:var(--fs-micro);cursor:pointer;transition:all var(--dur-1) var(--ease);white-space:nowrap}
+.tone-chip:hover{border-color:var(--accent-edge)}
+.tone-chip.selected{background:var(--accent-weak);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+
+/* 模板输入字段 */
+.tpl-field{margin-bottom:2px}
+.tpl-field label{display:block;font-size:var(--fs-micro);color:var(--ink-3);margin-bottom:2px}
+.tpl-field input,.tpl-field textarea{width:100%;padding:var(--sp-2);border:1px solid var(--border-control);border-radius:var(--r-sm);font-size:var(--fs-caption);font-family:var(--font-family);box-sizing:border-box}
+.tpl-field input:focus-visible,.tpl-field textarea:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.tpl-field input:focus,.tpl-field textarea:focus{border-color:var(--accent)}
+.tpl-field textarea{min-height:48px;resize:vertical}
+
+/* 空状态 —— 由 common.css 的 .empty-hint / .empty-icon 统一提供，此处不再重复定义 */
+
+/* 自动化面板子页签 */
+.subtabs{display:flex;gap:var(--sp-1);margin-bottom:var(--sp-2);background:var(--surface-sunken);border-radius:var(--r-sm);padding:var(--sp-1)}
+.subtab{flex:1;text-align:center;padding:var(--sp-1);border-radius:var(--r-sm);font-size:var(--fs-micro);color:var(--ink-3);cursor:pointer;transition:all var(--dur-1) var(--ease);white-space:nowrap}
+.subtab.active{background:var(--surface);color:var(--accent-ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.subpane{display:none}
+/* 子页签切换原先是硬 display 切换 —— 同一面板内的换页比整面板切换更频繁，
+   却是唯一没有反馈的地方。动效比 panel-in 更轻：嵌套层级越深、幅度越小，
+   否则连续切两次会有「整页在飘」的感觉。 */
+.subpane.active{display:block;animation:subpane-in var(--dur-2) var(--ease) both}
+@keyframes subpane-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* 横向滚动容器：表格在窄侧栏里不能撑破布局 */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}
+.tbl-wrap .tbl{font-size:var(--fs-caption)}
+.tbl-wrap .tbl th{background:var(--surface)}
+.tbl .up{color:var(--success-ink);font-weight:600}
+.tbl .warn-num{color:var(--warning-ink);font-weight:600}
+
+/* 按钮行 */
+.btn-row{display:flex;gap:var(--sp-2);margin-top:var(--sp-4)}
+.btn-row .btn{flex:1}
+
+/* 单篇明细的翻页条：按钮保持内容宽度（不吃 .btn-row 的 flex:1），
+   页码信息居中补位，整行随表格宽度收缩 */
+.dc-pager{display:flex;gap:var(--sp-3);margin-top:var(--sp-3);align-items:center}
+.dc-pager .btn{flex:0 0 auto}
+.dc-pager .t-xs{flex:1;text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* AI 诊断结果 —— .spinner / .spinner-inline 由 common.css 唯一定义，
+   这里不再重复声明几何和 @keyframes。 */
+.ai-summary{font-size:var(--fs-label);line-height:var(--lh);color:var(--ink);margin-bottom:var(--sp-3)}
+.ai-list{list-style:none;padding:0;margin:0 0 var(--sp-4)}
+.ai-list li{
+  position:relative;padding:var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+  margin-bottom:var(--sp-1);font-size:var(--fs-caption);line-height:var(--lh);
+  color:var(--ink-2);background:var(--surface-sunken);
+  border-radius:var(--r-sm);border-left:2px solid var(--border-control);
+}
+.ai-list li::before{content:'·';position:absolute;left:var(--sp-3);color:var(--ink-3);font-weight:700}
+.ai-list.ok li{border-left-color:var(--success);background:var(--success-weak)}
+.ai-list.warn li{border-left-color:var(--warning);background:var(--warning-weak)}
+.ai-list.info li{border-left-color:var(--info);background:var(--info-weak)}
+.ai-list.act li{border-left-color:var(--accent);background:var(--accent-weak)}
+.ai-list.act li::before{content:'→';left:var(--sp-2);color:var(--accent-ink)}
+/* 选题闭环：诊断建议旁的「转计划」。成功后由 JS 加 is-done 变绿态。 */
+.dc-to-plan{display:inline-flex;margin-left:var(--sp-2);vertical-align:middle}
+.dc-to-plan.is-done{border-color:transparent;background:var(--success-weak);color:var(--success-ink)}
+/* 单篇明细：可排序列头。三角指示只画在当前排序列上，方向由 aria-sort 驱动
+   （视觉与可访问性状态同源，不会出现「看着降序读着升序」。） */
+.tbl th.dc-th-sort{cursor:pointer;user-select:none}
+.tbl th.dc-th-sort:hover{color:var(--ink)}
+.tbl th.dc-th-sort::after{content:'';display:inline-block;margin-left:var(--sp-1);
+  border:4px solid transparent;border-top-color:currentColor;
+  transform:translateY(3px);opacity:0}
+.tbl th.dc-th-sort[aria-sort="descending"]::after{opacity:1}
+.tbl th.dc-th-sort[aria-sort="ascending"]::after{border-top-color:transparent;
+  border-bottom-color:currentColor;transform:translateY(-3px);opacity:1}
+/* 工作台趋势解读行（模板化文案，board.js trendSummary 产出） */
+.spark-note{margin:var(--sp-2) 0 0;font-size:var(--fs-caption);color:var(--ink-3)}
+/* 对标周报（automation.js auBenchWeekly 产出）——同一族模板化总结行 */
+#benchWeekly{margin:var(--sp-2) 0 var(--sp-3);font-size:var(--fs-caption);color:var(--ink-3);line-height:var(--lh)}
+
+/* 工作台 · 单日详情的逐篇卡片（v2.41.2 重排：
+   旧 .dc-row 无任何样式，标题与数字裸叠两行 —— 真机反馈「排列难看」。 */
+.bd-notes{margin-top:var(--sp-2)}
+.bd-note{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm);
+  padding:var(--sp-2) var(--sp-3); margin-bottom:var(--sp-2); min-width:0;
+}
+.bd-note-t{
+  font-size:var(--fs-label); font-weight:600; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.bd-note-m{
+  display:flex; gap:var(--sp-3); margin-top:2px;
+  font-size:var(--fs-caption); color:var(--ink-3);
+  font-variant-numeric:tabular-nums; flex-wrap:wrap;
+}
+.bd-note-m .bd-ctr{margin-left:auto}
+.bd-ctr.up{color:var(--success-ink); font-weight:600}
+.bd-ctr.down{color:var(--warning-ink)}
+
+/* 对标 · 增量趋势迷你图（automation.js auSparkPoints 产出折线） */
+.bench-trend{margin:var(--sp-2) 0 var(--sp-4)}
+.bench-tr{
+  display:flex; flex-direction:column; gap:2px;
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm);
+  padding:var(--sp-2) var(--sp-3); margin-bottom:var(--sp-2); min-width:0;
+}
+.bench-tr-n{font-size:var(--fs-label); font-weight:600; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.bench-tr-row{display:flex; align-items:center; gap:var(--sp-2); min-width:0}
+.bench-tr-k{flex:0 0 56px; font-size:var(--fs-caption); color:var(--ink-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bench-spark{width:100px; height:24px; color:var(--ink-2); flex:0 0 auto}
+.bench-tr-none{font-size:var(--fs-micro); color:var(--ink-disabled)}
+.bench-tr-d{margin-left:auto; font-size:var(--fs-caption); color:var(--ink-2);
+  font-variant-numeric:tabular-nums}
+
+/* ---------- AI 完整报告：健康度 / 逐项指标 / 逐篇诊断 ---------- */
+/* 健康度：分数在左、进度条在右，比一句「整体还不错」可读得多。
+   0-100 由模型给；不是它不给就不画，绝不用占位数字冒充结论。 */
+.health-row{
+  display:flex;align-items:center;gap:var(--sp-3);
+  padding:var(--sp-3);margin-bottom:var(--sp-3);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+}
+.health-num{
+  font-size:var(--fs-num);font-weight:700;line-height:1;
+  font-variant-numeric:tabular-nums;flex:0 0 auto;min-width:44px;
+}
+.health-num.ok{color:var(--success-ink)}
+.health-num.warn{color:var(--warning-ink)}
+.health-num.bad{color:var(--danger-ink)}
+.health-txt{flex:1 1 auto;min-width:0}
+.health-l{font-size:var(--fs-caption);color:var(--ink-2);margin-bottom:var(--sp-1)}
+.health-bar{height:6px;border-radius:var(--r-pill);background:var(--surface-sunken);overflow:hidden}
+/* --h 是数据通道（分数），不是视觉值 —— 与 .stagger 的 --i 同理，
+   所以走自定义属性而不是直接写 width，禁内联样式的闸门不会误报。 */
+.health-bar i{display:block;height:100%;width:var(--h,0%);border-radius:var(--r-pill);
+  transform-origin:left center; animation:grow-x var(--dur-3) var(--ease) both}
+.health-bar i.ok{background:var(--success)}
+.health-bar i.warn{background:var(--warning)}
+.health-bar i.bad{background:var(--danger)}
+
+/* 逐项指标：窄栏里两列刚好，宽屏（is-wide）自动变四列 */
+.metric-grid-ai{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2);margin-bottom:var(--sp-4)}
+.sp-body.is-wide .metric-grid-ai{grid-template-columns:repeat(4,1fr)}
+.mcard{
+  padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);
+  background:var(--surface-sunken);border-left:2px solid var(--border-control);
+}
+.mcard.ok{border-left-color:var(--success);background:var(--success-weak)}
+.mcard.warn{border-left-color:var(--warning);background:var(--warning-weak)}
+.mcard.bad{border-left-color:var(--danger);background:var(--danger-weak)}
+.mcard.idle{border-left-color:var(--border-control)}
+.mk{font-size:var(--fs-caption);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv{font-size:var(--fs-label);font-weight:600;margin:2px 0}
+.mcard.ok .mv{color:var(--success-ink)}
+.mcard.warn .mv{color:var(--warning-ink)}
+.mcard.bad .mv{color:var(--danger-ink)}
+.md{font-size:var(--fs-caption);color:var(--ink-3);line-height:1.5}
+
+/* 逐篇诊断：标题行 + 理由行。标题两行夹取，长标题不至于把行撑高。 */
+.ai-list.reviews li{padding-left:var(--sp-3)}
+.ai-list.reviews li::before{display:none}
+/* 逐篇诊断的三档配色。跟 .ai-list.ok/.warn 同源，
+   但这里用 .rv 自己的类名 —— 因为「值得复制/要复盘/待观察」
+   和「做得好的/需要警惕」是两种不同的语义分组，
+   共用一个类会让以后改其中一档时误伤另一档。 */
+.ai-list.reviews li.rv.ok{border-left-color:var(--success);background:var(--success-weak)}
+.ai-list.reviews li.rv.warn{border-left-color:var(--warning);background:var(--warning-weak)}
+.ai-list.reviews li.rv.bad{border-left-color:var(--danger);background:var(--danger-weak)}
+.rv-t{
+  display:flex;align-items:flex-start;gap:var(--sp-2);
+  font-weight:600;color:var(--ink);font-size:var(--fs-caption);
+}
+/* 标题两行夹取而不是单行省略 ——
+   单行省略会让用户只看到「我的开源小狐…」，根本认不出是哪篇笔记，
+   而逐篇诊断的价值就在于「我认得出来这是我的哪篇稿子」。 */
+.rv-name{
+  min-width:0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.rv-b{
+  flex:0 0 auto;margin-left:auto;padding:1px var(--sp-2);
+  border-radius:var(--r-pill);background:var(--surface);
+  font-size:var(--fs-micro);font-weight:500;color:var(--ink-2);
+  border:1px solid var(--border-control);
+}
+.rv-r{margin-top:2px;color:var(--ink-2);font-size:var(--fs-caption);line-height:1.55}
+.ai-raw{
+  margin-top:var(--sp-3);padding:var(--sp-3);max-height:220px;overflow:auto;
+  background:var(--surface-sunken);border-radius:var(--r-sm);
+  font-size:var(--fs-caption);font-family:var(--font-mono);
+  white-space:pre-wrap;word-break:break-all;color:var(--ink-2);
+}
+
+/* 网页监听里展开的请求体：<pre> 默认会撑破面板，必须能滚 */
+.au-body-pre {
+  margin:var(--sp-2) 0 0; padding:var(--sp-2);
+  max-height:180px; overflow:auto;
+  background:var(--surface-sunken); border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  font-family:var(--font-mono); font-size:var(--fs-caption);
+  line-height:1.5; color:var(--ink-2);
+  white-space:pre-wrap; word-break:break-all;
+}
+
+/* 任务行 / 监听行 */
+.task-row{flex-wrap:wrap}
+/* 控件合成一组：窄宽度时整组换行，而不是时间框留在第一行、
+   按钮掉到第二行 —— 那样两行都读不成一个完整的操作单元。 */
+.task-row .task-ctrl{
+  display:flex;align-items:center;gap:var(--sp-2);
+  /* 原来是 flex:0 0 auto —— 组不可收缩，340px 画布里控件比卡片内净宽还宽，
+     「试跑」被卡片右缘切掉。父级的 flex-wrap 只能把它换到下一行，
+     换行后照样溢出。改成可收缩 + 组内可换行，窄宽度下时间框与按钮自然分两行。 */
+  flex:1 1 auto;min-width:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;
+}
+.task-row .au-time{width:104px;flex-shrink:0}
+.task-row .au-toggle,.task-row .au-run{flex-shrink:0;white-space:nowrap}
+.err-text{color:var(--danger)}
+
+.net-row{border-left:2px solid var(--border-control);align-items:flex-start}
+.net-row.ok{border-left-color:var(--success)}
+.net-row.bad{border-left-color:var(--warning)}
+.net-head{display:flex;gap:var(--sp-2);align-items:center;min-width:0}
+.net-time{font-size:var(--fs-caption);color:var(--ink-3);font-family:var(--font-mono);flex-shrink:0}
+.net-method{font-size:var(--fs-caption);color:var(--ink-3);font-family:var(--font-mono);flex-shrink:0}
+.net-url{font-size:var(--fs-caption);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.net-row .au-body{margin-left:var(--sp-2)}
+
+/* ===== 以下为本页专用类（替代原先散落的内联 style）===== */
+
+/* 输入区下方的快捷操作行。
+   ⚠️ 这四个是**平级动作**（分析/改写/检测/生成），不是四级严重程度。
+      原来给它们涂了 qa-err 红 / qa-warn 橙 / qa-info 蓝 ——
+      一行里同时出现三种告警色，读起来像「这里有三个问题」，
+      而实际上它们只是四个入口。语义色留给真的有语义的地方。
+
+   ⚠️ 左右内边距原来各 12px：400px 画布里 .action-row 净宽只有 264px，
+      每个按钮摊到 60px；扣掉 24px 内边距 + 14px 图标 + 4px 间距，
+      只剩 18px 给文字，而「分析」两个字要 24px ——
+      于是「分析」被拆成「分 / 析」两行竖排（dev/prod-measure.mjs 实测
+      w=60、行盒 3）。改成左右 8px + white-space:nowrap 回到一行。
+
+   按钮高度从 46px（两行）降到 32px，一行放不下时也不会压扁文字。 */
+.qa{
+  flex:1 1 0;min-width:0;min-height:32px;
+  padding:var(--sp-1) var(--sp-2);border-radius:var(--r-sm);
+  border:1px solid var(--border);background:var(--surface);color:var(--ink-2);
+  font-size:var(--fs-caption);font-weight:500;font-family:var(--font-family);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-1);
+  white-space:nowrap;
+  transition:background var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease);
+}
+.qa:hover{border-color:var(--border-strong);background:var(--surface-hover);color:var(--ink)}
+.qa:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+
+/* 极窄（<340px，即 320 下限）：四个按钮**去掉图标**、内边距收到 4px。
+   量测：320 画布里 .action-row 净宽只有 184px，每个按钮摊到 40px；
+   「图标 14 + 间距 4 + 文字 24 + 内边距 16 = 58」根本放不下，nowrap 下会横向溢出 3px。
+
+   为什么不改成 2×2（那样能留住图标）：
+   代价是输入区多占 40px 高。判据是**常驻成本 vs 一次性成本** ——
+   少几个图标，读两次就记住了；而少 40px 是**每一条消息**都少 40px，
+   而且 320px 宽通常意味着窗口也不高，纵向比横向更金贵。
+   所以宁可牺牲识别速度，也要保住对话区的可视高度。 */
+.sp-body.is-tiny .qa{padding:var(--sp-1)}
+.sp-body.is-tiny .qa .t-ico{display:none}
+
+/* 状态行：一块「平时不占眼、出事才说话」的区域。
+   min-height 留住空态高度 —— 否则提示出现/消失会把下面内容顶下去。 */
+.status-line{
+  font-size:var(--fs-caption);line-height:1.5;color:var(--ink-3);
+  min-height:18px;transition:color var(--dur-2) var(--ease);
+}
+
+/* 博主卡简介段 */
+.author-intro{margin-top:var(--sp-3);font-size:var(--fs-label);color:var(--ink-2);line-height:var(--lh)}
+
+/* 分析车 */
+.cart-header{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-1) var(--sp-1) var(--sp-3)}
+.cart-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp-2)}
+.cart-actions{flex-shrink:0;margin-top:var(--sp-2)}
+.cart-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);box-shadow:var(--shadow-1);position:relative}
+/* 标题最多两行：真实笔记标题能写 60 字，不夹的话单条卡片会占掉半屏，
+   列表就被一条笔记挤没了。meta 同样只留一行。 */
+.cart-item-title{font-size:var(--fs-label);font-weight:600;color:var(--ink);line-height:var(--lh);margin-bottom:var(--sp-1);padding-right:var(--sp-5);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cart-item-meta{font-size:var(--fs-caption);color:var(--ink-3);display:flex;gap:var(--sp-3);flex-wrap:nowrap;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cart-item-time{font-size:var(--fs-caption);color:var(--ink-placeholder);margin-top:var(--sp-1)}
+.cart-item-del{position:absolute;top:var(--sp-2);right:var(--sp-2);background:none;border:none;font-size:var(--fs-title);cursor:pointer;color:var(--ink-placeholder);padding:2px;line-height:1}
+.cart-item-delete:hover{color:var(--ink-2)}
+
+/* 模板 / 语气 */
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.bench-textarea{min-height:70px;resize:vertical;font-size:var(--fs-caption)}
+.net-filter{flex:1;min-width:0;font-size:var(--fs-caption)}
+.net-list{max-height:340px;overflow-y:auto}
+
+/* 加载指示 —— 几何与 @keyframes 由 common.css 的 .spinner 唯一定义，
+   这里只覆盖本面板需要的尺寸。
+   （.spinner-inline 已随「加载气泡双转圈」的修复删除 —— 聊天加载态
+   由 .msg.loading .bubble::after 自动画圈，不再需要内联 spinner。） */
+.spinner{width:20px;height:20px;flex-shrink:0;margin-right:0}
+
+/* 设置页 · 账号绑定 */
+.account-state{display:flex;flex-direction:column;align-items:center;padding:var(--sp-4) 0}
+
+/* 设置页 · 自动采集总开关。
+   之前三个默认定时任务全是 enabled:false，装完扩展什么都不会发生，
+   用户必须自己去「自动化」页逐个打开 —— 这就是「还需要人工操作」的来源。
+   这里给一个一次点亮的入口：不必先知道有哪些任务、分别在几点。 */
+.auto-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:var(--sp-3);
+}
+/* 窄容器下文字列会被按钮压到每行四五个字，读不下去。
+   按钮是短标签、文字是主内容，文字优先 —— 让按钮整块换到下一行。 */
+.auto-row{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap}
+.auto-txt{flex:1 1 180px;min-width:0}
+.auto-t{font-size:var(--fs-label);font-weight:600;line-height:var(--lh)}
+.auto-d{font-size:var(--fs-caption);color:var(--ink-2);line-height:1.6;margin-top:2px}
+/* 下次运行时间：只在你真的开了之后才出现，没开时不占版面 */
+.auto-next{
+  margin-top:var(--sp-2);padding-top:var(--sp-2);
+  border-top:1px solid var(--border);
+  font-size:var(--fs-caption);color:var(--ink-2);
+}
+/* 开着的状态用绿色语义，不占用红色 —— 红色只给最高级主动作 */
+.auto-card.is-on{background:var(--success-weak);border-color:transparent}
+#btnAutoCollect{flex:0 0 auto;white-space:nowrap}
+#btnAutoCollect[aria-pressed="true"]{background:var(--success-weak);color:var(--success-ink);border-color:transparent}
+
+.bound-box{
+  display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3);
+  background:var(--success-weak);border:1px solid transparent;
+  border-radius:var(--r-md);margin-bottom:var(--sp-4);
+}
+.avatar-box{
+  width:40px;height:40px;border-radius:50%;background:var(--accent-weak);
+  display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-num);flex-shrink:0;overflow:hidden;
+}
+
+/* ============================================================
+   驾驶舱（v2.32.0）
+   --------------------------------------------------------
+   原来的「今天」页是仪表盘：三个数字 + 两行灰字。功能都在，
+   但没人告诉用户该按什么顺序用 —— 这是产品最大的摩擦点。
+
+   改成对话式主流程：引导条 → AI 说了什么 → 今天发什么 → 7 天排期。
+   --accent 在这里只承担三件事（项目既有约定）：
+   ① 引导条「当前步」的指示 ② 最高级主动作 ③ AI 建议卡的左边框。
+
+   ⚠️ 冷启动标注用 --warning 而不是 --accent：
+      「这份不是基于你的数据」是一句**警告**，不是一条建议。
+      染成品牌红会把它读成「今天的重点」，正好读反。
+   ============================================================ */
+
+.ck { display:flex; flex-direction:column; gap:var(--sp-4); padding:var(--sp-4) 0; }
+
+/* ---------- 引导条 ---------- */
+.ck-steps { display:flex; align-items:center; gap:var(--sp-2); list-style:none; margin:0; padding:0; }
+.ck-step { display:flex; align-items:center; gap:var(--sp-1); min-width:0; }
+.ck-step + .ck-step::before {
+  content:''; width:12px; height:1px; background:var(--border); margin:0 var(--sp-1);
+  flex:0 0 auto;
+}
+.ck-dot {
+  width:20px; height:20px; flex:0 0 20px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:var(--fs-caption); line-height:1;
+  background:var(--surface-sunken); color:var(--ink-3);
+  border:1px solid var(--border);
+}
+.ck-step-t { font-size:var(--fs-caption); color:var(--ink-3); white-space:nowrap; }
+.ck-step.is-done .ck-dot { background:var(--success-weak); color:var(--success-ink); border-color:transparent; }
+.ck-step.is-done .ck-dot-i { display:inline-flex; }
+.ck-dot-i { display:none; }
+.ck-step.is-done .ck-step-t { color:var(--ink-2); }
+/* 当前步：品牌色只用在「圆点 + 文字」这一处，指示位置而不是装饰 */
+.ck-step.is-now .ck-dot { background:var(--accent); color:#fff; border-color:transparent; font-weight:600; }
+.ck-step.is-now .ck-step-t { color:var(--ink-1, var(--ink-2)); font-weight:600; }
+
+/* ---------- AI 发言 ---------- */
+.ck-msg { display:flex; gap:var(--sp-2); align-items:flex-start; }
+.ck-ava {
+  width:24px; height:24px; flex:0 0 24px; border-radius:50%;
+  background:var(--accent-weak); color:var(--accent-ink);
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.ck-bubble {
+  flex:1 1 auto; min-width:0;
+  background:var(--surface-sunken); border-radius:var(--r-md);
+  padding:var(--sp-3); font-size:var(--fs-body); color:var(--ink-2);
+  line-height:var(--lh, 1.6);
+}
+.ck-bubble b { color:var(--ink-2); font-weight:600; }
+
+/* 账号不一致警告（v2.44.0）：计划/数据采的是「另一个登录」时要压过一切内容。
+   文字用 .t-err（--danger-ink 压 --danger-weak 5.16:1，AA） */
+.ck-acct-warn {
+  display:flex; align-items:flex-start; gap:var(--sp-2);
+  margin:0 0 var(--sp-2); padding:var(--sp-2) var(--sp-3);
+  background:var(--danger-weak); border-radius:var(--r-sm);
+}
+.ck-acct-warn .t-ico { flex:none; margin-top:2px; color:var(--danger-ink); }
+.ck-acct-warn .t-err { font-size:var(--fs-label); line-height:var(--lh, 1.6); }
+
+/* ---------- 今日任务卡 ---------- */
+/* 左边框是 --accent 的第三个合法用途：AI 建议卡 */
+.ck-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-left:3px solid var(--accent);
+  border-radius:var(--r-md); padding:var(--sp-3);
+  display:flex; flex-direction:column; gap:var(--sp-2);
+}
+.ck-card-h { display:flex; align-items:baseline; gap:var(--sp-2); }
+.ck-k { font-size:var(--fs-caption); color:var(--ink-3); }
+.ck-sub { font-size:var(--fs-caption); color:var(--ink-placeholder); margin-left:auto; }
+/* 体裁是这块卡里最该被一眼看到的东西 */
+.ck-genre {
+  font-size:var(--fs-body); font-weight:600; color:var(--accent-ink);
+}
+.ck-why, .ck-topic { margin:0; font-size:var(--fs-label); color:var(--ink-2); line-height:var(--lh, 1.6); }
+.ck-topic b, .ck-topic .ck-k { margin-right:var(--sp-1); }
+.ck-go { margin-top:var(--sp-1); }
+
+/* ---------- 冷启动警告 ----------
+   整块用 warning 配色，且不参与 --accent 的三件事。
+   宁可重一点，也不能让用户把通用建议当成基于自己数据的结论。 */
+.ck-flag {
+  display:flex; gap:var(--sp-2); align-items:flex-start;
+  background:var(--warning-weak); border:1px solid var(--warning);
+  border-radius:var(--r-md); padding:var(--sp-3);
+  font-size:var(--fs-label); color:var(--ink-2); line-height:var(--lh, 1.6);
+}
+.ck-flag-ico { color:var(--warning-ink, var(--warning)); flex:0 0 auto; }
+.ck-flag b { color:var(--ink-2); }
+
+/* ---------- 7 天排期 ---------- */
+.ck-plan { list-style:none; margin:0; padding:0; }
+.ck-plan li + li { border-top:1px solid var(--border); }
+/* 整行可点：比在行里塞一个 12px 的方框好按得多 */
+.ck-plan-row {
+  display:flex; align-items:center; gap:var(--sp-2);
+  width:100%; min-height:44px; padding:0;
+  border:none; background:transparent; cursor:pointer; text-align:left;
+  font-family:var(--font-family); color:var(--ink-2);
+}
+.ck-plan-row:hover { background:var(--surface-hover, var(--surface-sunken)); }
+.ck-done {
+  width:18px; height:18px; flex:0 0 18px; border-radius:var(--r-sm);
+  border:1.5px solid var(--border-strong, var(--border));
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.ck-plan-row[aria-checked="true"] .ck-done { background:var(--accent); border-color:var(--accent); }
+.ck-plan-row[aria-checked="true"] .ck-done::after {
+  content:''; width:9px; height:5px; border-left:2px solid #fff; border-bottom:2px solid #fff;
+  transform:rotate(-45deg) translate(1px, -1px);
+}
+.ck-day { font-size:var(--fs-caption); color:var(--ink-3); flex:0 0 auto; width:44px; }
+/* ⚠️ 排期里的体裁标签**不染品牌红**。
+   --accent 只承担三件事：选中指示条、最高级主动作、AI 建议卡左边框。
+   7 行体裁标签全染红会让「今天发什么」那一条失去唯一性 ——
+   而那一行才是用户今天唯一要执行的事。
+   「今天发什么」的红已经由上方建议卡的左边框 + .ck-genre 承担。 */
+.ck-plan-g {
+  font-size:var(--fs-caption); color:var(--ink-2); flex:0 0 auto;
+  background:var(--surface-sunken); border:1px solid var(--border);
+  border-radius:var(--r-sm); padding:1px var(--sp-1);
+}
+.ck-plan-t {
+  font-size:var(--fs-label); color:var(--ink-2); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ck-plan-row[aria-checked="true"] .ck-plan-t { color:var(--ink-3); text-decoration:line-through; }
+/* 选题闭环第二段：勾掉条目下的效果回收行。
+   缩进对齐标题列（80px ≈ 日期 44 + 勾选框 18 + 间距，归到 4px 基数；
+   精确复刻组件宽的 calc 会把 18px 字面量带进节奏体系），
+   颜色用中性 —— 高于/低于中位数是事实陈述，不是奖惩。 */
+.ck-outcome{margin:2px 0 var(--sp-2) 80px;
+  font-size:var(--fs-caption); color:var(--ink-3); line-height:var(--lh)}
+
+/* ---------- 提问框 ---------- */
+.ck-input { display:flex; gap:var(--sp-2); align-items:center; }
+.ck-input-box {
+  flex:1 1 auto; min-width:0; min-height:44px;
+  padding:0 var(--sp-3); border-radius:var(--r-sm);
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--ink-2); font-size:var(--fs-body); font-family:var(--font-family);
+}
+.ck-input-box::placeholder { color:var(--ink-placeholder); }
+.ck-input-box:focus-visible { outline:2px solid var(--accent-ring, var(--accent)); outline-offset:1px; }
+.ck-send {
+  width:44px; height:44px; flex:0 0 44px; border-radius:var(--r-sm);
+  border:none; background:var(--accent); color:#fff; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+/* ============================================================
+   对话输入区扩展：语音按钮 + 状态行 + 快捷键说明
+   （v2.33.0 追加。全部为新增类，不改动上方已有规则）
+   ============================================================ */
+
+/* ---- 语音按钮 ----
+   ⚠️ 必须覆盖 .input-row button 的规则：那条规则给输入行里**所有**按钮
+      都上了 --accent-solid 底色（发送键是主动作，用红是对的）。
+      语音是辅助动作，跟着变红会出现**两个红按钮**，
+      主次就没了 —— 而 --accent 按 AGENTS.md 只承担「最高级主动作」一件事。
+      所以这里用中性描边 + 透明底，把它明确降级。 */
+.input-row button.input-ico{
+  background:transparent;color:var(--ink-2);
+  border:1px solid var(--border-control);
+}
+.input-row button.input-ico:hover{background:var(--surface-hover);color:var(--ink)}
+.input-row button.input-ico:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+/* 录音中：状态必须一眼可见。用 --accent 只在这一刻 ——
+   它此刻就是输入区里唯一该被注意的主动作。 */
+.input-row button.input-ico.is-listening{
+  background:var(--accent-weak);color:var(--accent-ink);
+  border-color:var(--accent-edge);
+}
+.input-ico-g{display:inline-flex;align-items:center;justify-content:center}
+/* 录音时给一个呼吸提示，让「它还在听」这件事不需要读文字也知道。
+   走 --dur-loop 令牌（物理节拍），减动效下由 motion-sweep 的
+   prefers-reduced-motion 规则归零。 */
+.input-ico.is-listening .input-ico-g{animation:voicePulse var(--dur-pulse) ease-in-out infinite}
+@keyframes voicePulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* ---- 语音状态行 ----
+   常驻而不是出错才出现：min-height 留一行，
+   空的时候不占视觉重量，出错时用户眼睛已经在那一带。
+   宽度 100% + 换行，长句在 320px 下不会横向溢出。 */
+#voiceStatus{width:100%}
+#voiceStatus.is-listening{color:var(--accent-ink)}
+#voiceStatus.is-warn{color:var(--warning-ink)}
+#voiceStatus.is-error{color:var(--danger-ink)}
+
+/* ---- 快捷键说明（默认收起）---- */
+.kb{margin-top:var(--sp-1)}
+.kb-toggle{
+  display:inline-flex;align-items:center;gap:var(--sp-1);
+  background:none;border:none;padding:var(--sp-1) 0;
+  color:var(--ink-3);font-size:var(--fs-caption);
+  font-family:inherit;cursor:pointer;border-radius:var(--r-sm);
+}
+.kb-toggle:hover{color:var(--ink-2)}
+.kb-toggle:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+/* 展开时箭头转 90°，方向即状态，不需要再加一个字 */
+.kb-caret{display:inline-flex;transition:transform var(--dur-2) var(--ease)}
+.kb-toggle[aria-expanded="true"] .kb-caret{transform:rotate(90deg)}
+.kb-body{
+  margin-top:var(--sp-1);padding:var(--sp-2);
+  background:var(--surface-sunken);border:1px solid var(--border);
+  border-radius:var(--r-sm);
+}
+.kb-row{display:flex;align-items:baseline;gap:var(--sp-2);min-width:0}
+/* 键位用等宽 + 浅底，跟正文区分开。允许换行：
+   "Ctrl / Cmd + Enter" 在 320px 下必须能断开，否则会推出画布。 */
+.kb-k{
+  font-family:var(--font-mono);font-size:var(--fs-caption);
+  color:var(--ink);background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:0 var(--sp-1);white-space:nowrap;flex:0 0 auto;
+}
+.kb-v{font-size:var(--fs-caption);color:var(--ink-2);min-width:0}
+.kb-note{
+  margin:var(--sp-2) 0 0;font-size:var(--fs-caption);
+  color:var(--ink-3);line-height:1.5;
+}
+
+/* ============================================================
+   交互与状态层（v2.35.0，从设计实验室移植）
+   --------------------------------------------------------
+   调研来源：E:\工作\【汐构科技】\客户跟进\AI Design自行设计
+   的方法论 + design-to-product/references 六篇规范。
+   实验室原型先在 dev/preview.html 定稿，再移植到生产。
+   下面是**只改样式**的五项；空态三段式与导出回执要动 DOM，
+   单独一轮做，不混在这里。
+
+   ⚠️ 移植时的关键动作：把实验室的 `.shell.sp-body ` 前缀去掉。
+      实验室的 <style> 在 <link> 之前，靠双类选择器压过生产样式；
+      进了生产 CSS 就不该再靠特异性取胜，而是靠**排在后面**。
+      留着那个前缀会让规则更难覆盖 —— 而「难覆盖」正是本项目
+      反复吃亏的地方（.hidden !important、#panel-chat 都是）。
+   ============================================================ */
+
+/* ---------- 1. 状态标记：形状 + 颜色双通道 ----------
+   .pill 原来只有底色 + 字色。色觉障碍或强光下，
+   「达标」和「注意」除了颜色深浅没有第二个区别。
+   左侧加一枚 6px 形状记号，四态四种几何：
+   达标实心圆 / 注意空心环 / 掉队实心三角 / 中性小方块。
+   纯 CSS 画，不引图标 —— 引了会被 plain-sweep 的
+   「剥掉图标」档一起剥掉，形状通道就白做了。 */
+.pill { position:relative; padding-left:var(--sp-4); }
+.pill::before {
+  content:''; position:absolute; left:var(--sp-2); top:50%;
+  width:6px; height:6px; transform:translateY(-50%);
+}
+.pill.ok::before   { border-radius:var(--r-pill); background:var(--success); }
+.pill.warn::before {
+  border-radius:var(--r-pill); background:transparent;
+  box-shadow:inset 0 0 0 1.5px var(--warning);
+}
+/* 三角用 border 画：圆角与 box-shadow 都做不出这个几何 */
+.pill.err::before {
+  width:0; height:0; border-radius:0; background:transparent;
+  border-left:4px solid transparent; border-right:4px solid transparent;
+  border-top:6px solid var(--danger);
+}
+/* ⚠️ 这里原来写 border-radius:1px，被尺度闸门拦下（圆角只允许 8/12/16）。
+   拦得对：6px 的记号配 1px 圆角，在那个尺寸下是个说不清的圆坨 ——
+   远看是方、近看是圆，正好毁掉形状通道要建立的「这是方形」这层信息。
+   而形状通道本来就是四态四种几何：圆 / 环 / 三角 / **方**。
+   既然是方，就该是 0。 */
+.pill.idle::before { border-radius:0; background:var(--ink-placeholder); }
+
+/* ---------- 2. 勾选：状态变化有过渡，不是硬切 ----------
+   勾一个排期行时，勾选框填充 / 勾出现 / 标题划掉
+   三件事原本在同一帧里全变完，用户会以为是自己点歪了又点了一次。
+   终态不变，只补上过程。 */
+.ck-done {
+  transition:background var(--dur-1) var(--ease),
+             border-color var(--dur-1) var(--ease);
+}
+.ck-done::after {
+  opacity:0; transition:opacity var(--dur-1) var(--ease);
+}
+.ck-plan-row[aria-checked="true"] .ck-done::after { opacity:1; }
+.ck-plan-t { transition:color var(--dur-1) var(--ease); }
+
+/* ---------- 3. 引导条：阶段色 ----------
+   阶段色表示「在哪一步」，状态色表示「发生什么」，两者不混用。
+   原来三步之间的连接线一律 --border，看不出走到哪了。
+   给「通向当前步」那一段上弱档 --accent-ring：
+   连接线是路径不是结论，所以用弱档而不是实色。 */
+.ck-step.is-now::before { background:var(--accent-ring); }
+
+/* ---------- 4. 可点表面 hover 抬起 ----------
+   ⚠️ 只给**可点**的行。纯读数格（.kpi/.mcard/.spark）不加 ——
+   不可点的东西给 hover 反馈是在骗人，用户会以为能按。
+   抬起的解释是「这一行可以按」。 */
+.cart-item, .func-item, .tpl-card, .tl-row, .task {
+  transition:transform var(--dur-1) var(--ease),
+             box-shadow var(--dur-1) var(--ease),
+             border-color var(--dur-1) var(--ease);
+}
+.cart-item:hover, .func-item:hover, .tpl-card:hover,
+.tl-row:hover, .task:hover {
+  transform:translateY(-1px);
+  box-shadow:var(--shadow-2);
+  border-color:var(--border-strong);
+}
+
+/* ---------- 5. 驾驶舱分段进入，建立阅读顺序 ----------
+   .ck 的五块（引导条/AI 发言/建议卡/排期/提问框）
+   原本没有任何进入动效，整页一次性糊出来 ——
+   这正是「打开侧栏不知道从哪读起」的来源。
+   步长走 --stagger 令牌，封顶 4 步（220ms）+ --dur-2 = 420ms 收尾。
+   不让人等到动画播完才读得动。
+   减动效由 common.css 的全局 !important 归零，这里不再写一份 ——
+   写两份正是 motion-gap 闸门要抓的东西。 */
+@keyframes ckRise {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:none; }
+}
+.ck > * {
+  animation:ckRise var(--dur-2) var(--ease) both;
+  animation-delay:calc(var(--stagger) * var(--n, 0));
+}
+.ck > *:nth-child(1) { --n:0; }
+.ck > *:nth-child(2) { --n:1; }
+.ck > *:nth-child(3) { --n:2; }
+.ck > *:nth-child(4) { --n:3; }
+/* 第五块及以后不再累加：错峰是建立顺序，不是拖时间 */
+.ck > *:nth-child(n+5) { --n:4; }
+
+/* 「样本不足」不是一个体裁名。它不该染成品牌红 ——
+   染成红色会让用户读成「今天有个重要结论是待定」，
+   而真实含义是「这里还没有结论，原因是数据不够」。
+   用中性色，把注意力留给下面那句原因。 */
+.ck-genre.is-unknown { color:var(--ink-3); font-weight:400; }
+
+/* 采集未采全的说明：**独占一行**。
+   之前它塞在 .sec-title 的 .sub 里，而那个位置被「单篇明细」挤成竖排，
+   连「单篇明细」四个字都排成四行，原因文字直接被裁掉 ——
+   而那恰恰是排查翻页唯一需要的信息。
+   诊断信息被版式挤没了，等于没有诊断。 */
+.dc-shortfall {
+  margin:var(--sp-1) 0 var(--sp-3);
+  padding:var(--sp-2) var(--sp-3);
+  border-left:3px solid var(--warning);
+  background:var(--warning-weak);
+  border-radius:var(--r-sm);
+  font-size:var(--fs-label);
+  color:var(--ink-2);
+  line-height:var(--lh);
+}
+
+/* AI 诊断区：长内容不再把整块撑出面板
+   ------------------------------------------------------------------
+   症状（用户实测）：数据中心 AI 诊断卡片右侧被裁，底部出现横向滚动条。
+   而实验室用短数据时完全正常 —— 因为问题**只在长内容下出现**。
+
+   根因：grid 项的 `min-width` 默认是 auto，
+   意味着它**拒绝收缩到内容宽度以下**。
+   `.mcard` 里只要出现一个不能断的串（长数字、URL、
+   混排英文如 24G显卡能跑Kimi-K2），整条 grid 轨道就被撑宽，
+   连带把父容器撑出横向滚动 —— 卡片于是「看不见右半边」。
+
+   修：grid 项显式 min-width:0（允许收缩）+ 文本任意位置可断。
+   这两条是 CSS 里对付「网格/弹性子项被内容撑破」的标准解法。 */
+.metric-grid-ai > * { min-width:0; }
+.mcard .md,.mcard .mv,
+.mcard .mk { overflow-wrap:anywhere; }
+/* 逐篇诊断与小结同理：笔记标题常含英文与数字，同样会撑宽 */
+.ai-list li, .ai-summary, .ai-raw { min-width:0; overflow-wrap:anywhere; }

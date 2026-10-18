@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="24" fill="#ff2442"/>
-  <text x="64" y="88" font-size="72" text-anchor="middle" fill="white">📕</text>
+  <!-- small-RPA 图标 —— 品牌红圆角方块 + 白色上升数据折线
+       （旧版是 emoji 📕 当字形：Chrome 侧栏 16px 下糊成纯红方块，2026-10-07 重制） -->
+  <rect width="128" height="128" rx="28" fill="#ff2442"/>
+  <polyline points="20,88 50,58 70,78 100,44" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <polyline points="82,42 102,42 102,62" fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

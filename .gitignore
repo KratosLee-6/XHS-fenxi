@@ -23,3 +23,14 @@ node_modules/
 # 临时文件
 *.tmp
 *.log
+.gstack/
+
+# 本地工具目录（不属于本镜像内容）
+.agents/
+.claude/
+.mimosa/
+.zcode/
+.zcodeignore
+social-card-teamkb/
+skills-lock.json
+a11y-sweep.py

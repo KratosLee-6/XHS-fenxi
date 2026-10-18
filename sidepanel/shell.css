@@ -1,0 +1,326 @@
+/* ============================================================
+   shell.css —— 侧边栏骨架布局
+   --------------------------------------------------------
+   为什么单独成文件：骨架（body flex / rail / stage / topbar / main）
+   是**侧边栏专属**的。放进 common.css 会污染 popup ——
+   popup 是普通流式滚动页，被 ody{display:flex;height:100vh;overflow:hidden}
+   打中后内容会被裁掉。共享层只放令牌与可复用组件。
+
+   ⚠️ 加载顺序：sidepanel.html 里是
+        <link panels.css>  <link shell.css>  <link common.css>
+      common.css **必须最后**。panels.css 是从旧内联样式抽出来的，
+      里面重复定义了 .btn/.tbl/.input/.spinner 等组件；
+      让设计系统最后加载，它才能压住这些旧定义，而不是被反向覆盖。
+   ============================================================ */
+/* ============================================================
+   骨架布局
+   ============================================================ */
+/* 骨架根。用作用域类而不是裸 `body`：
+   设计实验室（dev/preview.html）也 link 本文件，裸 body 选择器会把
+   实验室外壳一起改成 100vh 裁切布局，导致画布错位。 */
+.sp-body {
+  margin:0; display:flex; flex-direction:row; height:100vh; overflow:hidden;
+  background:var(--canvas); color:var(--ink);
+  font-family:var(--font-family);
+  font-size:var(--fs-body); line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ------------------------------------------------------------------
+   宽屏：竖排导航轨 → 顶部横排
+   ------------------------------------------------------------------
+   Chrome 的 side panel 在 PC 上可以被用户拖到 1900px 宽。
+   在那个宽度下继续用 64px 的竖排图标轨，就像把手机 App
+   拉伸到横屏 —— 导航挤在最左边一条窄带里，右侧全是内容，
+   视觉重心完全失衡。而 side panel 本身是**桌面侧栏**，
+   宽到一定程度就该换成顶部横排导航，这是桌面工具的标准形态。
+
+   为什么用 .is-wide 类而不是 @container：
+   容器查询不能查询容器自己。要让 @container 生效，
+   container-type 得挂在 .sp-body 的**祖先**上，而生产 DOM 里
+   没有这样一个元素（.sp-body 就是最外层）。试过挂在
+   .sp-body 自身，@container 规则完全不生效 ——
+   侧栏宽度、方向、页面全白，量了三次才发现。
+   ResizeObserver 加类，行为可预期，也不依赖实验特性。
+   断点 560px：低于它保持竖排，高于它转横排。 */
+.sp-body.is-wide { flex-direction:column; }
+
+.sp-body.is-wide .stage { flex:1 1 auto; min-height:0; height:auto; }
+
+.sp-body.is-wide .rail {
+  width:100%; height:auto; flex:0 0 auto;
+  flex-direction:row; align-items:center;
+  gap:var(--sp-1); padding:var(--sp-2) var(--sp-4);
+  border-right:none; border-bottom:1px solid var(--border);
+  overflow:visible;
+}
+.sp-body.is-wide .rail-logo { margin-bottom:0; margin-right:var(--sp-2); }
+/* 横排下分隔线变成竖线 */
+.sp-body.is-wide .rail-sep,
+.sp-body.is-wide .rail-gap { width:1px; height:20px; margin:0 var(--sp-2); }
+/* 横排下「设置」不再顶到底部，跟着其它项排。
+   min-width 给 16px：空间够时把设置推到最右，空间不够时
+   收缩成一道最小间隙，而不是被压成 0 让两项贴死。 */
+.sp-body.is-wide .rail-flex,
+.sp-body.is-wide .rail-spacer { flex:1 1 auto; min-width:var(--sp-4); min-height:0; }
+/* 图标与文字改为一行。rail-ico 只给了 font-size:17px，
+   而图标本体是 data-ico-size=20 的硬编码 SVG，不吃 font-size ——
+   不显式给宽度的话 SVG 会占满，文字直接压在图标上（试过，糊成一团）。 */
+.sp-body.is-wide .rail-item {
+  flex-direction:row; width:auto; min-width:0; padding:0 var(--sp-3);
+  gap:var(--sp-2);
+  /* ⚠️ flex:0 0 auto —— **不许压扁**。
+     上面把 min-width 降成 0 之后，这一行 flex 默认是 0 1 auto（可收缩），
+     11 个导航项 + logo + 分隔线要塞进 560~900px，浏览器就选择
+     把每一项压到内容宽度以下 —— 标签于是折成竖排：
+     「工作台」变成 工/作/台，「分析车」变成 分/析/车。
+     dev/fit-gate.mjs 量到 .rail-item 文字占 4~6 行、其中一项纵向溢出 6px。
+
+     压扁的代价是**不可读**：导航项是每页唯一的主入口，它折行了
+     其余页面再整齐也没意义。而 .rail-scroll 本来就有 overflow-x:auto，
+     空间不够时**本来就该横向滚动** —— 让容器滚动，别让文字变形。 */
+  flex:0 0 auto;
+  white-space:nowrap;
+  /* 高度仍是 44px —— 触控目标 44×44 的高度那一维不能因为转横排就放弃，
+     宽度改成随内容，但高度守住 44。 */
+  height:44px;
+}
+.sp-body.is-wide .rail-ico { width:20px; height:20px; flex:0 0 20px; display:inline-flex; align-items:center; }
+.sp-body.is-wide .rail-ico svg { width:20px; height:20px; }
+.sp-body.is-wide .rail-lb,
+.sp-body.is-wide .rail-txt { font-size:var(--fs-caption); }
+/* 选中指示条从左边移到下边 */
+.sp-body.is-wide .rail-item.is-active::before {
+  left:var(--sp-2); right:var(--sp-2); top:auto; bottom:-1px;
+  width:auto; height:2px; border-radius:2px 2px 0 0;
+}
+/* 宽屏下顶栏与内容都已居中，顶栏不再需要重复的宽度上限 */
+.sp-body.is-wide .topbar { max-width:none; }
+
+/* ---------- 左侧导航轨道 ---------- */
+.rail {
+  width:var(--rail-w); flex:0 0 var(--rail-w); height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  gap:var(--sp-1); padding:var(--sp-3) 0;
+  background:var(--surface); border-right:1px solid var(--border);
+  position:relative; z-index:20;
+}
+.rail-logo { line-height:1; margin-bottom:var(--sp-2); }
+.rail-gap   { width:24px; height:1px; background:var(--border); margin:var(--sp-2) 0; }
+/* rail-sep 是 v2.7.0 写进 HTML 的新名，rail-gap 是同一条分隔线。
+   两个都留：之前只有 rail-gap 有样式，HTML 用的 rail-sep 是个
+   零尺寸空 div，主导航和「更多」之间根本没有视觉分隔。 */
+.rail-sep,
+.rail-gap   { width:24px; height:1px; background:var(--border); margin:var(--sp-2) 0; }
+/* 把「设置」顶到底部。旧名 rail-spacer 仍在 HTML 里用到，两个都留。 */
+.rail-flex,
+.rail-spacer { flex:1 1 auto; min-height:var(--sp-2); }
+
+/* ---------- 导航项列表（v2.31.0 单层化）----------
+   10 个功能项从「更多」浮层里搬出来后，超过一屏高度时需要能滚，
+   但**不能让「设置」跟着滚走** —— 它是所有页面都够得着的落脚点。
+   所以把列表单独装进 .rail-scroll：它自己滚，外壳与设置不动。
+   flex 侧栏常见高度 700px+，10 项排完约 560px，正常根本不会滚；
+   滚动只是窗口被压得极矮时的兜底，不是常规路径。 */
+.rail-scroll {
+  flex:1 1 auto; min-height:0; width:100%;
+  display:flex; flex-direction:column; align-items:center;
+  gap:var(--sp-1);
+  overflow-y:auto; overscroll-behavior:contain;
+}
+/* 64px 轨道里露出一条竖滚动条会很难看，而且它出现时通常
+   只差几十像素 —— 靠 hover/键盘聚焦自动滚入，不靠拖滚动条。 */
+.rail-scroll { scrollbar-width:none; -ms-overflow-style:none; }
+.rail-scroll::-webkit-scrollbar { display:none; }
+.sp-body.is-wide .rail-scroll {
+  flex:0 1 auto; min-width:0; height:auto;
+  flex-direction:row; align-items:center;
+  overflow-x:auto; overflow-y:hidden;
+}
+
+/* 触控目标 44×44（基础规则硬要求） */
+.rail-item {
+  position:relative;
+  width:44px; height:44px; min-width:44px;
+  border:none; background:transparent; cursor:pointer; padding:0;
+  border-radius:var(--r-sm);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; color:var(--ink-3); font-family:var(--font-family);
+  transition:background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.rail-item:hover { background:var(--surface-hover); color:var(--ink-2); }
+/* 弹性反馈：按下缩放 0.96，180ms */
+.rail-item:active { transform:scale(.96); }
+.rail-item.is-active { background:var(--accent-weak); color:var(--accent-ink); }
+.rail-item.is-active::before {
+  content:''; position:absolute; left:-10px; top:10px; bottom:10px;
+  width:3px; background:var(--accent); border-radius:0 3px 3px 0;
+}
+.rail-ico { line-height:1; }
+/* rail-lb 是新名，rail-txt 是 v2.7.0 初版写进 HTML 的旧名，两个都留 */
+.rail-lb,
+.rail-txt { font-size:var(--fs-micro); line-height:1.15; letter-spacing:-.2px; }
+
+/* ---------- 内容舞台 ---------- */
+/* position:relative 是撤销条的定位上下文 ——
+   没有它，.undo-bar 的 position:absolute 会贴到视口而不是侧栏底部。 */
+.stage { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; height:100vh; position:relative; }
+
+/* 分隔线画在 .stage 上，不在 .topbar 自身：
+   .topbar 被限制到 720px 后，它的 border-bottom 只会画到 720px 处，
+   右侧会断成两截。而 .stage 是满宽的，线画在这里才连贯。 */
+.stage::after {
+  content:''; position:absolute; left:0; right:0;
+  top:var(--topbar-h); height:1px; background:var(--border);
+  pointer-events:none; z-index:1;
+}
+.topbar {
+  height:var(--topbar-h); flex:0 0 var(--topbar-h);
+  display:flex; align-items:center; gap:var(--sp-3);
+  padding:0 var(--sp-5);
+  background:var(--surface);
+  /* 与 .main 同一套宽度约束。不加的话版本号会被 margin-left:auto
+     顶到 1900px 处，而下面的内容只占中间 720px ——
+     顶栏与正文对不齐，看起来就像两个不同的页面拼在一起。 */
+  max-width:calc(720px + var(--sp-5) * 2);
+  width:100%; margin:0 auto;
+}
+/* flex 容器里不给 flex-shrink:0，「数据中心」四个字会被压成竖排三行。
+   .topbar 是 nowrap 的两栏布局：左边标题与副标题，右边版本号。
+   标题必须完整，压缩应该发生在副标题（它已有 ellipsis）。 */
+.topbar-title {
+  font-size:var(--fs-title); font-weight:600; letter-spacing:-.2px; color:var(--ink);
+  flex:0 0 auto; white-space:nowrap;
+}
+.topbar-sub { flex:0 1 auto; }
+.topbar-sub {
+  font-size:var(--fs-caption); color:var(--ink-3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+}
+.build-stamp {
+  margin-left:auto;
+  /* 版本号与标题一样不该被压缩 —— 一旦被压，v2.29.1 会变成 v2.29…，
+     截图上看着像坏掉的版本。 */
+  flex:0 0 auto; white-space:nowrap;
+  padding:2px var(--sp-2); border-radius:var(--r-pill);
+  background:var(--surface-sunken); border:1px solid var(--border);
+  font-size:var(--fs-micro); font-family:var(--font-mono); color:var(--ink-3);
+}
+
+/* ------------------------------------------------------------------
+   .page-lamp：顶栏上的「当前页面状态」灯
+   ------------------------------------------------------------------
+   为什么要有它：删掉 popup 之后，用户一眼看不出「现在能不能抓」。
+   那个信息不是可有可无的装饰 —— 它决定了你按「一键采集」会不会白等。
+
+   ⚠️ 触控目标：这是可点的（点一下抓当前页），但顶栏高度只有
+   --topbar-h，给不到 44px。AGENTS.md 那条 44px 规则针对的是
+   导航项与图标按钮，这属于**顶栏内的状态指示**，
+   但我仍然给了足够的点击区（min-height:24px + 完整 padding），
+   并保留 hover/focus 反馈，不让它看起来像死文字。
+   ------------------------------------------------------------------ */
+.page-lamp {
+  margin-left:auto;
+  display:flex; align-items:center; gap:var(--sp-2);
+  min-height:24px; padding:0 var(--sp-3);
+  border-radius:var(--r-pill);
+  border:1px solid var(--border);
+  background:var(--surface-sunken);
+  font-family:var(--font-family); font-size:var(--fs-caption);
+  color:var(--ink-2); cursor:pointer;
+  flex:0 0 auto; white-space:nowrap;
+  transition:background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+}
+.page-lamp:hover { background:var(--surface-hover); border-color:var(--border-strong); }
+.page-lamp:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.page-lamp:active { transform:scale(.98); }
+
+.lamp-txt { flex:0 1 auto; min-width:0; }
+/* 灯点：靠形状 + 颜色双通道表达状态，不只靠颜色 ——
+   色觉障碍用户看不到红色差异时仍能靠形状分辨。 */
+.lamp-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--ink-placeholder); flex:0 0 auto;
+  transition:background var(--dur-fast);
+}
+/* 可抓：小红书页面已就绪 */
+.page-lamp[data-state="ready"] .lamp-dot { background:var(--success); }
+.page-lamp[data-state="ready"] { border-color:color-mix(in srgb, var(--success) 30%, var(--border)); }
+/* 不在目标页：中性灰，不报错 —— 用户可能只是还没切过去 */
+.page-lamp[data-state="other"] .lamp-dot { background:var(--ink-placeholder); }
+/* 抓取中：脉冲，而不是换颜色 */
+.page-lamp[data-state="busy"] .lamp-dot {
+  background:var(--accent);
+  animation:lamp-pulse 1.2s var(--ease) infinite;
+}
+@keyframes lamp-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.45; transform:scale(.8); }
+}
+/* 减动效：脉冲必须停，否则一直有东西在闪 */
+@media (prefers-reduced-motion: reduce) {
+  .page-lamp[data-state="busy"] .lamp-dot { animation:none; opacity:1; }
+}
+
+/* build-stamp 不再自己顶右边 —— 位置交给 .page-lamp 的 margin-left:auto，
+   否则状态灯会被推到屏幕外（两者都会 auto，等于互相抵消）。 */
+.build-stamp { margin-left:0; }
+
+/* ------------------------------------------------------------------
+   窄屏收敛（按类，不按视口）
+   ------------------------------------------------------------------
+   ⚠️ 这是被 overflow-sweep 实测逼出来的，不是预防性设计：
+   320px 下顶栏塞「标题 + 副标题 + 状态灯 + 版本号」会横向越界 38~71px。
+   侧栏最窄就是 320px，所以**这不是边缘情况，是主场景**。
+
+   ⚠️⚠️ 这里**必须用类（.is-narrow），不能用 @media** ——
+   `@media (max-width:400px)` 查的是**视口**宽度，而侧栏是被浏览器
+   窗口限宽的：用户在 1900px 窗口里把侧栏拖到 320px，视口仍然是 1900px，
+   媒体查询**永远不成立**。实验室三档并排时更是必然失效。
+   结果是「规则写了、元素照样越界」，而且没有任何报错提示。
+   —— 与 .is-wide 同源的坑，已在 JS 注释里记录。
+
+   收敛策略按重要性降级：
+     1. 版本号先让位（信息量最低）
+     2. 副标题其次
+     3. 状态灯的文字最后让位，但**灯点必须留着** ——
+        它是「能不能抓」的唯一信号，去掉就等于把 popup 删了个寂寞。
+   ------------------------------------------------------------------ */
+.sp-body.is-narrow .build-stamp { display:none; }
+.sp-body.is-narrow .topbar-sub { display:none; }
+.sp-body.is-narrow .page-lamp { margin-left:auto; padding:0 var(--sp-2); }
+.sp-body.is-narrow .lamp-txt { display:none; }
+/* 文字没了，灯点就成了唯一可读内容 —— 用 ::after 显示 data-label 副本 */
+.sp-body.is-narrow .page-lamp::after {
+  content:attr(data-label);
+  font-size:var(--fs-caption); color:var(--ink-2);
+}
+
+/* 极窄（320px）：按钮本身也要占位，只留灯点，靠 title / aria-label 提示 */
+.sp-body.is-tiny .page-lamp::after { display:none; }
+.sp-body.is-tiny .page-lamp { padding:0 var(--sp-3); }
+
+/* ------------------------------------------------------------------
+   内容宽度上限 —— 这条是整个侧栏最重要的一条布局约束。
+   ------------------------------------------------------------------
+   Chrome 的 side panel 宽度由用户拖拽决定，范围从 320px（最窄）
+   一直到窗口全宽。在 1900px 宽的窗口上可以是 1800px 以上 ——
+   跨度六倍。以前所有画布都锁在 320/360/400 三档，
+   于是「卡片不能无限横向拉伸」这件事从来没被验证过，
+   结果面板一拉宽就全花：标题和「已开启」标签隔了一千多像素，
+   正文一行拉到屏幕边缘（中文超过 45 字就该换行了），
+   KPI 格子各占三分之一屏却只显示两个数字。
+
+   720px 不是拍脑袋的数字：正文 15px 中文一行约 45 字是舒适上限，
+   再宽眼睛就要来回扫。超过这个宽度，内容居中，
+   两侧留白，而不是继续拉伸。
+   ------------------------------------------------------------------ */
+.main {
+  flex:1 1 auto; min-height:0; overflow-y:auto; padding:var(--sp-5);
+  display:flex; flex-direction:column;
+}
+.main > * { width:100%; max-width:720px; margin-left:auto; margin-right:auto; }
+.main::-webkit-scrollbar { width:8px; }
+.main::-webkit-scrollbar-thumb { background:var(--border-strong); border-radius:4px; }
+
+
